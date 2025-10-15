@@ -5,6 +5,7 @@ Entry point for the financial data API service with AI capabilities.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.finance_routes import router as financial_router
+from routes.agent_routes import router as agent_router
 from config.settings import get_settings
 from core.utils import setup_logger
 
@@ -32,6 +33,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(financial_router, prefix="/api/v1", tags=["financial-data"])
+app.include_router(agent_router, prefix="/api/v1/agent", tags=["llm-agent"])
 
 # Root endpoint
 @app.get("/")
@@ -52,6 +54,15 @@ async def root():
                     "/health"
                 ]
             },
+            "v1_agent": {
+                "base": "/api/v1/agent",
+                "description": "LLM-powered natural language financial analysis",
+                "endpoints": [
+                    "/query",
+                    "/health",
+                    "/examples"
+                ]
+            }
         }
     }
 

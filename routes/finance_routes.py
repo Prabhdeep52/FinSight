@@ -5,6 +5,7 @@ Defines API endpoints for accessing stock data and system health.
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
+import asyncio
 from data_services.financial_agent import FinancialAgent
 from core.utils import logger
 
@@ -86,7 +87,7 @@ async def get_stock_data(symbol: str):
     try:
         logger.info(f"API request for stock symbol: {symbol}")
         
-        data = financial_agent.fetch_stock_data(symbol)
+        data = await asyncio.to_thread(financial_agent.fetch_stock_data, symbol)
         
         if data.get('error'):
             raise HTTPException(
