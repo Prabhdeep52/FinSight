@@ -7,3 +7,4 @@ langchain>=0.3.27
 langchain-core>=0.3.79
 langchain-google-genai>=2.1.12
 langgraph>=0.6.10
+supabase>=2.7.4

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     alphavantage_api_key: Optional[str] = None
     news_api_key: Optional[str] = None
     
+    # Database Configuration - Supabase
+    supabase_url: Optional[str] = None
+    supabase_anon_key: Optional[str] = None
+    
     # AI/LLM Configuration - Updated for Gemini
     google_api_key: Optional[str] = None
     gemini_model: str = "gemini-2.5-flash"  # Fast and cost-effective

@@ -1,12 +1,15 @@
 """
 Alpha Vantage API tool for fetching global stock data.
 Uses Alpha Vantage's REST API to get financial information for global stocks.
+Includes Supabase caching for improved performance and reduced API calls.
 """
 import requests
+import threading
 from typing import Dict, Any, Optional
 from core.utils import logger, safe_float, standardize_financial_data, handle_api_error
 from core.constants import ALPHAVANTAGE_BASE_URL, ALPHAVANTAGE_FUNCTIONS, DEFAULT_CURRENCY
 from config.settings import get_settings
+from database.supabase_client import SupabaseManager
 
 
 class AlphaVantageAPI:
@@ -17,10 +20,22 @@ class AlphaVantageAPI:
         self.base_url = ALPHAVANTAGE_BASE_URL
         self.api_key = self.settings.alphavantage_api_key
         self.session = requests.Session()
+        
+        # Initialize Supabase manager if credentials are available
+        try:
+            if self.settings.supabase_url and self.settings.supabase_anon_key:
+                self.db = SupabaseManager()
+                logger.info("AlphaVantageAPI: Successfully initialized with Supabase caching")
+            else:
+                self.db = None
+                logger.warning("AlphaVantageAPI: Supabase credentials not found, caching disabled")
+        except Exception as e:
+            logger.error(f"AlphaVantageAPI: Failed to initialize Supabase: {str(e)}")
+            self.db = None
     
     def fetch_company_overview(self, symbol: str) -> Dict[str, Any]:
         """
-        Fetch company overview data from Alpha Vantage.
+        Fetch company overview data from cache or Alpha Vantage.
         
         Args:
             symbol: Stock symbol (e.g., 'AAPL', 'GOOGL')
@@ -28,11 +43,34 @@ class AlphaVantageAPI:
         Returns:
             Dictionary containing financial metrics
         """
+        logger.info(f"AlphaVantageAPI: LLM requested data for symbol: {symbol}")
+
         if not self.api_key:
+            logger.error("AlphaVantageAPI: No Alpha Vantage API key configured")
             return {
                 'error': True,
                 'message': 'Alpha Vantage API key not configured'
             }
+        
+        # Try to get data from Supabase cache first
+        if self.db:
+            try:
+                cached_data = self.db.get_stock_data(symbol)
+                if cached_data:
+                    logger.info(f"AlphaVantageAPI: Returning cached data from Supabase for {symbol}")
+                    # Add cache metadata
+                    cached_data['cache_info'] = {
+                        'cache_hit': True,
+                        'data_source': 'supabase_cache'
+                    }
+                    return cached_data
+            except Exception as e:
+                logger.error(f"AlphaVantageAPI: Error accessing Supabase cache for {symbol}: {str(e)}")
+        else:
+            logger.info(f"AlphaVantageAPI: Supabase not available, fetching directly from API for {symbol}")
+        
+        # If no cached data, fetch from Alpha Vantage
+        logger.info(f"AlphaVantageAPI: Cache miss - fetching fresh data from Alpha Vantage API for {symbol}")
         
         try:
             params = {
@@ -41,8 +79,6 @@ class AlphaVantageAPI:
                 'apikey': self.api_key
             }
             
-            logger.info(f"Fetching data from Alpha Vantage for symbol: {symbol}")
-            
             response = self.session.get(
                 self.base_url,
                 params=params,
@@ -50,18 +86,21 @@ class AlphaVantageAPI:
             )
             
             if response.status_code != 200:
+                logger.error(f"AlphaVantageAPI: HTTP error {response.status_code} for {symbol}")
                 return handle_api_error(response, "Alpha Vantage")
             
             data = response.json()
             
             # Check for API errors
             if 'Error Message' in data:
+                logger.error(f"AlphaVantageAPI: Alpha Vantage API error for {symbol}: {data['Error Message']}")
                 return {
                     'error': True,
                     'message': data['Error Message']
                 }
             
             if 'Note' in data or 'Information' in data:
+                logger.warning(f"AlphaVantageAPI: Alpha Vantage rate limit or info for {symbol}")
                 return {
                     'error': True,
                     'message': 'API rate limit exceeded or other issue',
@@ -71,15 +110,42 @@ class AlphaVantageAPI:
             # Process the data
             processed_data = self._process_overview_data(data, symbol)
             
-            logger.info(f"Successfully fetched data for {symbol}")
+            if processed_data.get('error'):
+                logger.error(f"AlphaVantageAPI: Error processing data for {symbol}")
+                return processed_data
+            
+            # Add API source metadata
+            processed_data['cache_info'] = {
+                'cache_hit': False,
+                'data_source': 'alpha_vantage_api'
+            }
+            
+            # Save to cache asynchronously (don't wait for it)
+            if self.db:
+                def save_to_cache():
+                    try:
+                        success = self.db.save_stock_data(symbol, processed_data)
+                        if success:
+                            logger.info(f"AlphaVantageAPI: Successfully cached data for {symbol} in background")
+                        else:
+                            logger.warning(f"AlphaVantageAPI: Failed to cache data for {symbol}")
+                    except Exception as e:
+                        logger.error(f"AlphaVantageAPI: Background cache save error for {symbol}: {str(e)}")
+                
+                # Run cache save in background thread
+                cache_thread = threading.Thread(target=save_to_cache, daemon=True)
+                cache_thread.start()
+                logger.info(f"AlphaVantageAPI: Initiated background cache save for {symbol}")
+            
+            logger.info(f"AlphaVantageAPI: Successfully fetched and processed data for {symbol}")
             return processed_data
             
         except requests.RequestException as e:
-            logger.error(f"Request error for {symbol}: {str(e)}")
+            logger.error(f"AlphaVantageAPI: Network request error for {symbol}: {str(e)}")
             return {'error': True, 'message': f'Request failed: {str(e)}'}
         
         except Exception as e:
-            logger.error(f"Unexpected error for {symbol}: {str(e)}")
+            logger.error(f"AlphaVantageAPI: Unexpected error for {symbol}: {str(e)}")
             return {'error': True, 'message': f'Processing failed: {str(e)}'}
     
     def _process_overview_data(self, data: Dict[str, Any], symbol: str) -> Dict[str, Any]:
@@ -122,6 +188,14 @@ class AlphaVantageAPI:
             
             # Analyst data
             processed['analyst_target_price'] = safe_float(data.get('AnalystTargetPrice'))
+            
+            # Agent metadata
+            processed['agent_info'] = {
+                'processed_by': 'FinancialAgent',
+                'symbol_processed': symbol,
+                'market_type': 'global',
+                'version': '1.0.0'
+            }
             
             return processed
             
