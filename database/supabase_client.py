@@ -115,6 +115,92 @@ class SupabaseManager:
             logger.error(f"SupabaseManager: Error saving data for {symbol}: {str(e)}")
             return False
 
+    # --- Generic statement caching helpers ---
+    def _get_statement_record(self, table: str, symbol: str) -> Optional[Dict[str, Any]]:
+        """Internal helper to read a statement record from a specific table."""
+        try:
+            logger.info(f"SupabaseManager: Checking cache table '{table}' for symbol: {symbol}")
+            response = self.client.table(table) \
+                .select("*") \
+                .eq('symbol', symbol.upper()) \
+                .execute()
+
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+
+        except Exception as e:
+            logger.error(f"SupabaseManager: Error fetching record from {table} for {symbol}: {str(e)}")
+            return None
+
+    def get_statement_data(self, table: str, symbol: str, max_age_hours: int = 24) -> Optional[Dict[str, Any]]:
+        """Get statement JSON for a symbol from a named table if fresh.
+
+        Args:
+            table: Supabase table name for the statement (e.g., 'income_statements')
+            symbol: Stock symbol
+            max_age_hours: TTL in hours (default 24)
+
+        Returns:
+            The stored JSON data dict if present and fresh; otherwise None
+        """
+        try:
+            record = self._get_statement_record(table, symbol)
+            if not record:
+                logger.info(f"SupabaseManager: No cached record in {table} for {symbol}")
+                return None
+
+            last_updated_str = record.get('last_updated')
+            if not last_updated_str:
+                logger.warning(f"SupabaseManager: No timestamp found in {table} for {symbol}, treating as stale")
+                return None
+
+            last_updated = datetime.fromisoformat(last_updated_str.replace('Z', '+00:00'))
+            age_hours = (datetime.now(timezone.utc) - last_updated).total_seconds() / 3600
+            if age_hours < max_age_hours:
+                logger.info(f"SupabaseManager: Cache hit in {table} for {symbol}, age: {age_hours:.2f} hours")
+                return record.get('data')
+            else:
+                logger.info(f"SupabaseManager: Cache expired in {table} for {symbol}, age: {age_hours:.2f} hours")
+                return None
+
+        except Exception as e:
+            logger.error(f"SupabaseManager: Error getting statement data from {table} for {symbol}: {str(e)}")
+            return None
+
+    def save_statement_data(self, table: str, symbol: str, data: Dict[str, Any]) -> bool:
+        """Save statement JSON into the specified table (upsert).
+
+        Args:
+            table: Supabase table name
+            symbol: Stock symbol
+            data: JSON-serializable dict to store
+
+        Returns:
+            True on success, False otherwise
+        """
+        try:
+            logger.info(f"SupabaseManager: Saving record to table '{table}' for symbol: {symbol}")
+            upsert_data = {
+                'symbol': symbol.upper(),
+                'data': data,
+                'last_updated': datetime.now(timezone.utc).isoformat()
+            }
+
+            response = self.client.table(table) \
+                .upsert(upsert_data) \
+                .execute()
+
+            if response.data:
+                logger.info(f"SupabaseManager: Successfully saved statement for {symbol} to {table}")
+                return True
+            logger.error(f"SupabaseManager: Failed to save statement for {symbol} to {table} - no response data")
+            return False
+
+        except Exception as e:
+            logger.error(f"SupabaseManager: Error saving statement to {table} for {symbol}: {str(e)}")
+            return False
+
     def delete_stock_data(self, symbol: str) -> bool:
         """
         Delete stock data from Supabase.

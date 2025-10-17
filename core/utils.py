@@ -27,28 +27,69 @@ def setup_logger(name: str, level: str = "INFO") -> logging.Logger:
 
 
 def is_indian_stock(symbol: str) -> bool:
-    """Check if a stock symbol is from Indian market."""
+    """Check if a stock symbol is from Indian market using LLM."""
     symbol_upper = symbol.upper()
     
-    # Check for NSE/BSE suffixes
+    # Check for explicit NSE/BSE suffixes first
     if any(symbol_upper.endswith(suffix) for suffix in [".NS", ".BO"]):
         return True
     
-    # Known global symbols that should not be classified as Indian
-    global_symbols = {'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA', 'IBM', 'NFLX', 'PYPL'}
-    if symbol_upper in global_symbols:
+    # Use LLM to determine market
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_core.messages import SystemMessage, HumanMessage
+        from config.settings import get_settings
+        
+        settings = get_settings()
+        
+        # Initialize LLM
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash-exp",
+            google_api_key=settings.google_api_key,
+            temperature=0
+        )
+        
+        system_prompt = """You are a stock market expert. Determine if a stock symbol belongs to the Indian stock market or global/US markets.
+
+Rules:
+- Indian stocks trade on NSE (National Stock Exchange) or BSE (Bombay Stock Exchange)
+- Common Indian stocks: INFY (Infosys), TCS (Tata Consultancy), RELIANCE, HDFC, WIPRO, etc.
+- Global/US stocks trade on NASDAQ, NYSE, etc.
+- Common US stocks: AAPL (Apple), MSFT (Microsoft), GOOGL (Google), AMZN (Amazon), INTC (Intel), AMD, etc.
+
+Respond with only "INDIAN" or "GLOBAL" - no other text."""
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"Stock symbol: {symbol_upper}")
+        ]
+        
+        response = llm.invoke(messages)
+        result = response.content.strip().upper()
+        
+        return result == "INDIAN"
+        
+    except Exception as e:
+        logger.warning(f"LLM market detection failed for {symbol}: {str(e)}, using fallback")
+        
+        # Fallback to simple heuristics only if LLM fails
+        return _fallback_market_detection(symbol_upper)
+
+
+def _fallback_market_detection(symbol: str) -> bool:
+    """Fallback market detection using simple heuristics."""
+    symbol_upper = symbol.upper()
+    
+    # Very basic fallback - only for critical known cases
+    definitely_indian = {'INFY', 'TCS', 'RELIANCE', 'HDFC', 'WIPRO', 'ICICI'}
+    if symbol_upper in definitely_indian:
+        return True
+    
+    definitely_global = {'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'INTC', 'AMD', 'NVDA', 'TSLA', 'META'}
+    if symbol_upper in definitely_global:
         return False
     
-    # Indian symbols are typically 3-5 letters, all caps, no dots
-    # and commonly known Indian companies
-    known_indian = {'INFY', 'TCS', 'RELIANCE', 'WIPRO', 'HDFC', 'ICICI', 'SBI', 'ITC', 'BHARTI'}
-    if symbol_upper in known_indian:
-        return True
-    
-    # Heuristic: If it's 4 letters or less, all alpha, and not in global list, assume Indian
-    if len(symbol_upper) <= 4 and symbol_upper.isalpha() and symbol_upper not in global_symbols:
-        return True
-    
+    # For unknown symbols, default to global (safer assumption)
     return False
 
 
