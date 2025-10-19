@@ -11,6 +11,36 @@ from core.utils import logger
 from config.settings import get_settings
 
 
+# Global Supabase client instance
+_supabase_client: Optional[Client] = None
+
+
+def get_supabase_client() -> Client:
+    """
+    Get or create a singleton Supabase client instance.
+    
+    Returns:
+        Supabase Client instance
+    """
+    global _supabase_client
+    
+    if _supabase_client is None:
+        settings = get_settings()
+        
+        if not settings.supabase_url or not settings.supabase_anon_key:
+            logger.error("get_supabase_client: Missing supabase_url or supabase_anon_key in settings")
+            raise ValueError("Supabase URL and key must be set in settings/environment variables")
+        
+        try:
+            _supabase_client = create_client(settings.supabase_url, settings.supabase_anon_key)
+            logger.info("get_supabase_client: Successfully initialized Supabase client")
+        except Exception as e:
+            logger.error(f"get_supabase_client: Failed to initialize Supabase client: {str(e)}")
+            raise
+    
+    return _supabase_client
+
+
 class SupabaseManager:
     """
     Manager class for Supabase operations.
@@ -100,8 +130,9 @@ class SupabaseManager:
             }
             
             # Upsert data (insert or update if exists)
+            # on_conflict specifies which column to use for conflict detection
             response = self.client.table('stock_overview') \
-                .upsert(upsert_data) \
+                .upsert(upsert_data, on_conflict='symbol') \
                 .execute()
 
             if response.data:
@@ -188,7 +219,7 @@ class SupabaseManager:
             }
 
             response = self.client.table(table) \
-                .upsert(upsert_data) \
+                .upsert(upsert_data, on_conflict='symbol') \
                 .execute()
 
             if response.data:

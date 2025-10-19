@@ -17,6 +17,35 @@ The Financial Agent is a LangGraph-based autonomous AI system that integrates La
 
 ### Multi-Step Analytical Workflows
 
+User Query: "Analyze Apple stock"
+↓
+[LLM Call #1 - Tool Orchestration]
+→ LLM: "I'll call get_stock_data('AAPL')"
+→ Tool executes, returns JSON
+→ Stored in state["stock_data"]
+→ LLM: "I'll call get_balance_sheet('AAPL')"
+→ Tool executes, returns JSON
+→ Stored in state["statement_data"]
+↓
+[We format all collected data into readable context]
+↓
+[LLM Call #2 - Analysis Generation]
+→ Fresh LLM conversation with formatted context
+→ LLM reads the organized data
+→ Writes investment analysis report
+↓
+Final Response to User
+
+Why Not Just One Call?
+You might ask: "Why doesn't the first LLM just write the analysis after calling tools?"
+
+Answer: We COULD do that, but:
+
+Token limits: The tool execution conversation gets very long (tool calls + responses)
+Context clarity: A fresh formatted context is cleaner
+Separation of concerns: Tool orchestration vs. analysis writing are different skills
+Better prompts: We can use specialized prompts for each phase
+
 - **Sequential Analysis Planning**: Breaks down complex financial analysis into logical steps, executing each phase systematically
 - **Contextual Memory Management**: Maintains conversation context across multiple queries, building upon previous analysis for deeper insights
 - **Hypothesis Formation**: Generates investment hypotheses based on data patterns and tests them through systematic analysis

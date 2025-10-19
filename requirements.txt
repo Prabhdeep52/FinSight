@@ -8,3 +8,4 @@ langchain-core>=0.3.79
 langchain-google-genai>=2.1.12
 langgraph>=0.6.10
 supabase>=2.7.4
+python-socketio[asgi]>=5.11.2

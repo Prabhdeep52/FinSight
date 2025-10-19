@@ -14,7 +14,7 @@ settings = get_settings()
 logger = setup_logger(__name__, "INFO" if not settings.debug else "DEBUG")
 
 # Create FastAPI application
-app = FastAPI(
+fastapi_app = FastAPI(
     title="InvestIQ LLM-Powered Financial Agent API",
     description="LLM-powered financial analysis API using OpenAI GPT with function calling for intelligent stock analysis",
     version="2.1.0",
@@ -23,7 +23,7 @@ app = FastAPI(
 )
 
 # Add CORS middleware
-app.add_middleware(
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure this for production
     allow_credentials=True,
@@ -32,11 +32,11 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(financial_router, prefix="/api/v1", tags=["financial-data"])
-app.include_router(agent_router, prefix="/api/v1/agent", tags=["llm-agent"])
+fastapi_app.include_router(financial_router, prefix="/api/v1", tags=["financial-data"])
+fastapi_app.include_router(agent_router, prefix="/api/v1/agent", tags=["llm-agent"])
 
 # Root endpoint
-@app.get("/")
+@fastapi_app.get("/")
 async def root():
     """Root endpoint with API information."""
     return {
@@ -67,13 +67,13 @@ async def root():
     }
 
 # Health check endpoint at root level
-@app.get("/health")
+@fastapi_app.get("/health")
 async def health():
     """Simple health check endpoint."""
     return {"status": "healthy", "service": "InvestIQ LLM-Powered Financial Agent", "version": "2.1.0"}
 
 # Startup event
-@app.on_event("startup")
+@fastapi_app.on_event("startup")
 async def startup_event():
     """Application startup event."""
     logger.info("InvestIQ LLM-Powered Financial Agent API v2.1 starting up...")
@@ -83,10 +83,14 @@ async def startup_event():
     logger.info("API documentation available at: /docs")
 
 # Shutdown event
-@app.on_event("shutdown")
+@fastapi_app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event."""
     logger.info("InvestIQ LLM-Powered Financial Agent API shutting down...")
+
+
+# Use FastAPI app directly (no Socket.IO)
+app = fastapi_app
 
 if __name__ == "__main__":
     import uvicorn

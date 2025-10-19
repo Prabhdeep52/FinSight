@@ -3,10 +3,16 @@ FastAPI routes for LangGraph financial agent interactions.
 Provides natural language interface for financial analysis.
 """
 from fastapi import APIRouter, HTTPException, Body
-from typing import Dict, Any, Optional
+from fastapi.responses import StreamingResponse
+from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field
 from agents.langgraph_agent import create_financial_agent
+from agents.langgraph_agent_optimized import create_optimized_financial_agent
+from agents.langgraph_agent_autonomous import create_optimized_autonomous_agent  # NEW
+from config.settings import get_settings
 from core.utils import logger
+import json
+import asyncio
 
 
 # Request/Response models
@@ -18,15 +24,24 @@ class AgentQueryRequest(BaseModel):
         min_length=3,
         max_length=500
     )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Optional session id for conversation continuity"
+    )
+    user_id: Optional[str] = Field(
+        default=None,
+        description="Optional user id for persistence"
+    )
     analysis_type: Optional[str] = Field(
         default="comprehensive",
         description="Type of analysis (comprehensive, valuation, performance, risk)"
     )
-    
     class Config:
         json_schema_extra = {
             "example": {
                 "query": "What is the situation of Apple stock?",
+                "session_id": "test-session-123",
+                "user_id": "test_user",
                 "analysis_type": "comprehensive"
             }
         }
@@ -38,6 +53,7 @@ class AgentQueryResponse(BaseModel):
     response: str
     symbols_analyzed: list
     stock_data: Dict[str, Any]
+    statement_data: Dict[str, Any] = {}  # Financial statements (income, balance, cash flow, earnings)
     analysis_results: Dict[str, Any]
     status: str
     error_message: Optional[str] = None
@@ -68,25 +84,72 @@ class AgentHealthResponse(BaseModel):
 # Initialize router and agent
 router = APIRouter()
 
-# Global agent instance (initialized lazily)
+# Global agent instances (initialized lazily)
 _agent_instance = None
+_optimized_agent_instance = None
+_autonomous_agent_instance = None
+
+
+def reset_agent_cache():
+    """Reset agent cache to force re-initialization."""
+    global _agent_instance, _optimized_agent_instance, _autonomous_agent_instance
+    _agent_instance = None
+    _optimized_agent_instance = None
+    _autonomous_agent_instance = None
+    logger.info("AgentRoutes: Agent cache reset")
 
 
 def get_agent():
-    """Get or create the global agent instance."""
-    global _agent_instance
-    if _agent_instance is None:
-        logger.info("AgentRoutes: Initializing new agent instance")
-        try:
-            _agent_instance = create_financial_agent()
-            logger.info("AgentRoutes: Agent instance created successfully")
-        except Exception as e:
-            logger.error(f"AgentRoutes: Failed to create agent instance: {str(e)}")
-            raise HTTPException(
-                status_code=500, 
-                detail=f"Failed to initialize financial agent: {str(e)}"
-            )
-    return _agent_instance
+    """Get or create the appropriate agent instance based on settings."""
+    settings = get_settings()
+    
+    # Use autonomous agent if enabled (highest priority)
+    if settings.use_autonomous_agent:
+        global _autonomous_agent_instance
+        if _autonomous_agent_instance is None:
+            logger.info("AgentRoutes: Initializing new AUTONOMOUS agent instance")
+            try:
+                _autonomous_agent_instance = create_optimized_autonomous_agent()
+                logger.info("AgentRoutes: Autonomous agent instance created successfully")
+            except Exception as e:
+                logger.error(f"AgentRoutes: Failed to create autonomous agent: {str(e)}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to initialize autonomous agent: {str(e)}"
+                )
+        return _autonomous_agent_instance
+    
+    # Use optimized agent if enabled
+    elif settings.use_optimized_agent:
+        global _optimized_agent_instance
+        if _optimized_agent_instance is None:
+            logger.info("AgentRoutes: Initializing new OPTIMIZED agent instance")
+            try:
+                _optimized_agent_instance = create_optimized_financial_agent()
+                logger.info("AgentRoutes: Optimized agent instance created successfully")
+            except Exception as e:
+                logger.error(f"AgentRoutes: Failed to create optimized agent: {str(e)}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to initialize optimized agent: {str(e)}"
+                )
+        return _optimized_agent_instance
+    
+    else:
+        # Use original agent
+        global _agent_instance
+        if _agent_instance is None:
+            logger.info("AgentRoutes: Initializing new ORIGINAL agent instance")
+            try:
+                _agent_instance = create_financial_agent()
+                logger.info("AgentRoutes: Original agent instance created successfully")
+            except Exception as e:
+                logger.error(f"AgentRoutes: Failed to create original agent: {str(e)}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to initialize original agent: {str(e)}"
+                )
+        return _agent_instance
 
 
 @router.get("/", summary="Agent Information")
@@ -145,14 +208,57 @@ async def process_agent_query(request: AgentQueryRequest):
         agent = get_agent()
         logger.info("AgentRoutes: Agent instance obtained")
         
-        # Process the query
+        # Process the query with session support
         logger.info("AgentRoutes: Starting query processing")
-        result = agent.process_query(request.query)
+        result = agent.process_query(
+            request.query, 
+            session_id=request.session_id,
+            user_id=request.user_id
+        )
         logger.info(f"AgentRoutes: Query processing completed with status: {result.get('status')}")
         
         # Log analysis summary
         symbols_count = len(result.get('symbols_analyzed', []))
         logger.info(f"AgentRoutes: Analysis covered {symbols_count} symbols: {result.get('symbols_analyzed')}")
+        
+        # Add availability markers for data that wasn't fetched
+        for symbol in result.get('symbols_analyzed', []):
+            statement_data = result.get('statement_data', {}).get(symbol, {})
+            
+            # Mark missing statement data
+            if 'income_statement' not in statement_data:
+                if 'statement_data' not in result:
+                    result['statement_data'] = {}
+                if symbol not in result['statement_data']:
+                    result['statement_data'][symbol] = {}
+                result['statement_data'][symbol]['income_statement'] = {
+                    "available": False,
+                    "message": "Agent did not request this data"
+                }
+            
+            if 'balance_sheet' not in statement_data:
+                if symbol not in result['statement_data']:
+                    result['statement_data'][symbol] = {}
+                result['statement_data'][symbol]['balance_sheet'] = {
+                    "available": False,
+                    "message": "Agent did not request this data"
+                }
+            
+            if 'cash_flow' not in statement_data:
+                if symbol not in result['statement_data']:
+                    result['statement_data'][symbol] = {}
+                result['statement_data'][symbol]['cash_flow'] = {
+                    "available": False,
+                    "message": "Agent did not request this data"
+                }
+            
+            if 'earnings' not in statement_data:
+                if symbol not in result['statement_data']:
+                    result['statement_data'][symbol] = {}
+                result['statement_data'][symbol]['earnings'] = {
+                    "available": False,
+                    "message": "Agent did not request this data"
+                }
         
         return AgentQueryResponse(**result)
         
@@ -166,6 +272,58 @@ async def process_agent_query(request: AgentQueryRequest):
             status_code=500, 
             detail=f"Query processing failed: {str(e)}"
         )
+
+
+@router.post("/query-stream", summary="Stream Query Processing")
+async def stream_agent_query(request: AgentQueryRequest):
+    """
+    Stream agent thinking process to frontend in real-time.
+    
+    Returns Server-Sent Events (SSE) with agent progress updates.
+    """
+    logger.info(f"AgentRoutes: Starting streaming query: {request.query}")
+    
+    async def event_generator():
+        try:
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Initializing agent...', 'step': 'init', 'progress': 0})}\n\n"
+            await asyncio.sleep(0.1)
+            
+            agent = get_agent()
+            logger.info("AgentRoutes: Agent instance obtained for streaming")
+            
+            # Stream execution events with session support
+            for event in agent.stream_execution(
+                request.query,
+                session_id=request.session_id,
+                user_id=request.user_id
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+                await asyncio.sleep(0.05)
+            
+            yield "data: [DONE]\n\n"
+            
+        except Exception as e:
+            logger.error(f"AgentRoutes: Streaming error: {str(e)}")
+            error_event = {
+                'type': 'error',
+                'message': str(e),
+                'step': 'error'
+            }
+            yield f"data: {json.dumps(error_event)}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type"
+        }
+    )
 
 
 @router.post("/query-simple", summary="Simple Query Interface")
@@ -279,6 +437,38 @@ async def get_query_examples():
             "Analyze the risk factors for NVDA"
         ]
     }
+
+
+@router.post("/clear-session-cache", summary="Clear Session Cache")
+async def clear_session_cache(session_id: Optional[str] = Body(None, embed=True)):
+    """
+    Clear session-level data cache for follow-up questions.
+    Call this when user starts a new chat to ensure fresh data fetching.
+    
+    Args:
+        session_id: Optional session ID to clear. If not provided, clears all caches.
+    """
+    logger.info(f"AgentRoutes: Clearing session cache for session_id={session_id}")
+    
+    try:
+        agent = get_agent()
+        if hasattr(agent, 'clear_session_cache'):
+            agent.clear_session_cache(session_id)
+            return {
+                "status": "success",
+                "message": f"Session cache cleared for {session_id if session_id else 'all sessions'}"
+            }
+        else:
+            return {
+                "status": "not_supported",
+                "message": "Current agent does not support session caching"
+            }
+    except Exception as e:
+        logger.error(f"AgentRoutes: Error clearing session cache: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear session cache: {str(e)}"
+        )
 
 
 @router.get("/supported-symbols", summary="Supported Stock Symbols")

@@ -28,8 +28,7 @@ def test_tools():
         print(f"   ✓ Tool name: {stock_tool.name}")
         print(f"   ✓ Tool description: {stock_tool.description[:80]}...")
     except Exception as e:
-        print(f"   ✗ Stock tool creation failed: {e}")
-        return False
+        assert False, f"Stock tool creation failed: {e}"
     
     # Test analysis tool creation
     print("\n2. Testing Analysis Tool Creation...")
@@ -40,7 +39,7 @@ def test_tools():
         print(f"   ✓ Tool description: {analysis_tool.description[:80]}...")
     except Exception as e:
         print(f"   ✗ Analysis tool creation failed: {e}")
-        return False
+        assert False, f"Analysis tool creation failed: {e}"
     
     # Test analysis tool with mock data
     print("\n3. Testing Analysis Tool with Mock Data...")
@@ -70,9 +69,7 @@ def test_tools():
         
     except Exception as e:
         print(f"   ✗ Analysis tool test failed: {e}")
-        return False
-    
-    return True
+        assert False, f"Analysis tool test failed: {e}"
 
 def test_indian_vs_global_detection():
     """Test the Indian vs Global stock detection logic."""
@@ -94,17 +91,14 @@ def test_indian_vs_global_detection():
         
         for symbol, expected, description in test_cases:
             result = is_indian_stock(symbol)
-            status = "✓" if result == expected else "✗"
+            assert result == expected, f"{symbol}: Expected {expected}, got {result}"
             market = "Indian" if result else "Global"
-            print(f"   {status} {symbol}: Detected as {market} ({description})")
-        
-        print("   ✓ Market detection logic working correctly")
-        return True
+                    
+
         
     except Exception as e:
-        print(f"   ✗ Market detection test failed: {e}")
-        return False
-
+                    print(f"   ✗ Market detection test failed: {e}")
+                    assert False, f"Market detection test failed: {e}"
 def test_agent_without_llm():
     """Test agent components that don't require LLM."""
     print("\n5. Testing Agent Components (No LLM)...")
@@ -121,14 +115,14 @@ def test_agent_without_llm():
             current_step="test"
         )
         print("   ✓ Agent state created successfully")
-        print(f"   ✓ Query: {state.user_query}")
-        print(f"   ✓ Symbols: {state.extracted_symbols}")
+        print(f"   ✓ Query: {state['user_query']}")
+        print(f"   ✓ Symbols: {state['extracted_symbols']}")
         
         return True
         
     except Exception as e:
         print(f"   ✗ Agent component test failed: {e}")
-        return False
+        assert False, f"Agent component test failed: {e}"
 
 def main():
     """Run all tests."""
