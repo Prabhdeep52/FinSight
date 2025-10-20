@@ -1,16 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 "use client"
 
 import type React from "react"
 
-import { type FormEvent, useState, useEffect, useRef } from "react"
+import { type FormEvent, useState, useEffect, useRef, useMemo } from "react"
+import { useAuth } from "./contexts/AuthContext"
+import { useNavigate } from "react-router-dom"
 import ChatHeader from "./chat-header"
 import ChatMessages from "./chat-messages"
 import ChatInput from  "./chat-input"
 import { AgentProgressSidebar } from "./components/AgentProgressSidebar"
+import { ChatHistorySidebar, type ChatHistorySidebarHandle } from "./components/ChatHistorySidebar"
+import { FinancialDashboard } from "./components/dashboard/FinancialDashboard"
 import { streamAgentQuery, type StreamEvent, type StreamEventData } from "./services/streamingService"
-import { Activity } from "lucide-react"
 
 type AgentResponse = {
   query: string
@@ -37,6 +41,9 @@ type ChatMessage = {
 const API_ENDPOINT = "http://localhost:8000/api/v1/agent/query" ; 
 
 export default function ChatApp() {
+  const { userId, accessToken, logout } = useAuth()
+  const navigate = useNavigate()
+  
   const [query, setQuery] = useState("")
   const [analysisType, setAnalysisType] = useState("comprehensive")
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -44,16 +51,17 @@ export default function ChatApp() {
   
   // Session management for conversation continuity
   const [sessionId, setSessionId] = useState<string>("")
-  const [userId] = useState<string>("user_" + Date.now()) // In production, get from auth
   
   // Streaming state
   const [streamEvents, setStreamEvents] = useState<StreamEvent[]>([])
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const chatHistorySidebarRef = useRef<ChatHistorySidebarHandle>(null)
   
   // Generate session ID on mount (creates new conversation)
   useEffect(() => {
@@ -114,18 +122,49 @@ export default function ChatApp() {
 
     console.log('🚀 Starting query with session:', sessionId, 'user:', userId);
 
+    // If this is the first message in a new chat, update the conversation title immediately
+    if (messages.length === 0 && accessToken) {
+      try {
+        await fetch(`http://localhost:8000/api/v1/agent/update-conversation-title`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            title: userQuery.length > 60 ? userQuery.substring(0, 57) + "..." : userQuery,
+          }),
+        });
+        console.log('✅ Updated conversation title');
+        
+        // Refresh chat history sidebar to show the new conversation
+        chatHistorySidebarRef.current?.refresh();
+      } catch (err) {
+        console.error('Failed to update conversation title:', err);
+      }
+    }
+
+    // Track thinking events for this specific query
+    const currentQueryEvents: StreamEvent[] = [];
+
     try {
       await streamAgentQuery(
         userQuery,
         sessionId,
-        userId,
+        userId || '',
+        accessToken,
         // onProgress
         (event: StreamEvent) => {
           console.log('📊 Progress event:', event);
           setStreamEvents((prev) => [...prev, event])
+          // Collect events for this query only (exclude separators)
+          if (event.step !== 'new_query') {
+            currentQueryEvents.push(event);
+          }
         },
         // onComplete
-        (data: StreamEventData) => {
+        async (data: StreamEventData) => {
           const assistantMessage: ChatMessage = {
             id: `assistant-${Date.now()}`,
             role: "assistant",
@@ -138,6 +177,26 @@ export default function ChatApp() {
           setMessages((prev) => [...prev, assistantMessage])
           setIsLoading(false)
           setIsStreaming(false)
+          
+          // Save thinking events to backend
+          try {
+            if (accessToken && currentQueryEvents.length > 0) {
+              await fetch(`http://localhost:8000/api/v1/agent/save-thinking/${sessionId}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  thinking: currentQueryEvents,
+                  query: userQuery,
+                }),
+              });
+              console.log('✅ Saved thinking events to backend');
+            }
+          } catch (err) {
+            console.error('Failed to save thinking events:', err);
+          }
         },
         // onError
         (error) => {
@@ -186,9 +245,14 @@ export default function ChatApp() {
   const handleNewChat = async () => {
     // Clear session cache on backend
     try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      
       await fetch('http://localhost:8000/api/v1/agent/clear-session-cache', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ session_id: sessionId })
       })
       console.log("🧹 Cleared session cache for:", sessionId)
@@ -206,28 +270,115 @@ export default function ChatApp() {
     console.log("🆕 New chat session started:", newSessionId)
   }
 
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const handleSelectChat = async (selectedSessionId: string) => {
+    if (!accessToken) return;
+
+    try {
+      // Fetch messages for this conversation
+      const response = await fetch(
+        `http://localhost:8000/api/v1/agent/chat-messages/${selectedSessionId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to load conversation');
+      }
+
+      const data = await response.json();
+      
+      // Load messages
+      const loadedMessages: ChatMessage[] = data.messages.map((msg: any) => ({
+        id: `${msg.role}-${msg.id}`,
+        role: msg.role,
+        content: msg.content,
+        symbols: msg.metadata?.symbols,
+        stockData: msg.metadata?.stock_data,
+        statementData: msg.metadata?.statement_data,
+        timestamp: new Date(msg.created_at),
+        isError: false,
+      }));
+
+      setMessages(loadedMessages);
+      setSessionId(selectedSessionId);
+      
+      // Load thinking_history directly from conversation
+      const thinkingHistory = data.thinking_history || [];
+      setStreamEvents(thinkingHistory);
+      
+      console.log('✅ Loaded conversation:', selectedSessionId);
+      console.log(`   Messages: ${loadedMessages.length}`);
+      console.log(`   Thinking events: ${thinkingHistory.length}`);
+      
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    }
+  };
+
+  // Extract stock data for dashboard
+  const dashboardStocks = useMemo(() => {
+    // Get the last assistant message with stock data
+    const lastAssistantMsg = messages.slice().reverse().find(m => m.role === 'assistant' && m.stockData);
+    
+    if (!lastAssistantMsg || !lastAssistantMsg.symbols || !lastAssistantMsg.stockData) {
+      return [];
+    }
+
+    return lastAssistantMsg.symbols.map(symbol => ({
+      symbol,
+      stockData: lastAssistantMsg.stockData?.[symbol] || {},
+      statementData: lastAssistantMsg.statementData?.[symbol] || {},
+    }));
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <ChatHeader 
         onClear={handleClear}
         onNewChat={handleNewChat}
+        onLogout={handleLogout}
+        onToggleChatHistory={() => setIsChatHistoryOpen(!isChatHistoryOpen)}
         hasMessages={messages.length > 0} 
         isLoading={isLoading}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
         isStreaming={isStreaming}
       />
-      <ChatMessages messages={messages} isLoading={isLoading} chatEndRef={chatEndRef} />
-      <ChatInput
-        query={query}
-        setQuery={setQuery}
-        analysisType={analysisType}
-        setAnalysisType={setAnalysisType}
-        isLoading={isLoading}
-        onSubmit={handleSubmit}
-        onKeyDown={handleKeyDown}
-        textareaRef={textareaRef}
-      />
+      
+      {/* Main Content: Dashboard (70%) + Chat (30%) */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Financial Dashboard */}
+        <div className="flex-[7] border-r border-gray-700">
+          <FinancialDashboard stocks={dashboardStocks} />
+        </div>
+
+        {/* Chat Section */}
+        <div className="flex-[3] flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            <ChatMessages messages={messages} isLoading={isLoading} chatEndRef={chatEndRef} />
+          </div>
+          <div className="border-t border-gray-700">
+            <ChatInput
+              query={query}
+              setQuery={setQuery}
+              analysisType={analysisType}
+              setAnalysisType={setAnalysisType}
+              isLoading={isLoading}
+              onSubmit={handleSubmit}
+              onKeyDown={handleKeyDown}
+              textareaRef={textareaRef}
+            />
+          </div>
+        </div>
+      </div>
       
       {/* Agent Progress Sidebar */}
       <AgentProgressSidebar 
@@ -235,6 +386,18 @@ export default function ChatApp() {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         isStreaming={isStreaming}
+      />
+      
+      {/* Chat History Sidebar */}
+      <ChatHistorySidebar
+        ref={chatHistorySidebarRef}
+        isOpen={isChatHistoryOpen}
+        onClose={() => setIsChatHistoryOpen(false)}
+        onSelectChat={handleSelectChat}
+        onNewChat={handleNewChat}
+        currentSessionId={sessionId}
+        userId={userId}
+        accessToken={accessToken}
       />
     </div>
   )

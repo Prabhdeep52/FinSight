@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Database Configuration - Supabase
     supabase_url: Optional[str] = None
     supabase_anon_key: Optional[str] = None
+    supabase_jwt_secret: Optional[str] = None  # For JWT verification
     
     # AI/LLM Configuration - Updated for Gemini
     google_api_key: Optional[str] = None

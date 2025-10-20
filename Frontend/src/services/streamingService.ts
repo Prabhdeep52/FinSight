@@ -30,6 +30,7 @@ export const streamAgentQuery = async (
   query: string,
   sessionId: string,
   userId: string,
+  accessToken: string | null,
   onProgress: (event: StreamEvent) => void,
   onComplete: (data: StreamEventData) => void,
   onError: (error: string) => void
@@ -37,15 +38,22 @@ export const streamAgentQuery = async (
   try {
     console.log('📤 Sending query:', { query, sessionId, userId });
     
+    // Prepare headers with auth token
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/agent/query-stream`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ 
         query,
         session_id: sessionId,
-        user_id: userId
+        user_id: userId  // Still included but will be overridden by JWT
       }),
     });
 

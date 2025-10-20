@@ -1,10 +1,12 @@
 "use client"
 
-import { Activity } from "lucide-react"
+import { Activity, LogOut, History } from "lucide-react"
 
 interface ChatHeaderProps {
   onClear: () => void
   onNewChat?: () => void
+  onLogout: () => void
+  onToggleChatHistory: () => void
   hasMessages: boolean
   isLoading: boolean
   onToggleSidebar: () => void
@@ -15,6 +17,8 @@ interface ChatHeaderProps {
 export default function ChatHeader({ 
   onClear,
   onNewChat,
+  onLogout,
+  onToggleChatHistory,
   hasMessages, 
   isLoading, 
   onToggleSidebar,
@@ -29,6 +33,26 @@ export default function ChatHeader({
           <p className="text-sm text-muted-foreground">Your AI powered Financial Agent</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Chat History Button */}
+          <button
+            onClick={onToggleChatHistory}
+            className="px-4 py-2 rounded-lg flex items-center gap-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors text-sm font-medium"
+            title="View chat history"
+          >
+            <History className="w-4 h-4" />
+            <span>Chats</span>
+          </button>
+          
+          {/* Logout Button */}
+          <button
+            onClick={onLogout}
+            className="px-4 py-2 rounded-lg flex items-center gap-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm font-medium"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+          
           {/* Agent Progress Button */}
           <button
             onClick={onToggleSidebar}

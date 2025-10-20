@@ -2,7 +2,7 @@
 FastAPI routes for LangGraph financial agent interactions.
 Provides natural language interface for financial analysis.
 """
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends, Request
 from fastapi.responses import StreamingResponse
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field
@@ -11,6 +11,7 @@ from agents.langgraph_agent_optimized import create_optimized_financial_agent
 from agents.langgraph_agent_autonomous import create_optimized_autonomous_agent  # NEW
 from config.settings import get_settings
 from core.utils import logger
+from core.auth import JWTBearer, get_current_user
 import json
 import asyncio
 
@@ -274,14 +275,17 @@ async def process_agent_query(request: AgentQueryRequest):
         )
 
 
-@router.post("/query-stream", summary="Stream Query Processing")
-async def stream_agent_query(request: AgentQueryRequest):
+@router.post("/query-stream", summary="Stream Query Processing", dependencies=[Depends(JWTBearer())])
+async def stream_agent_query(request_data: AgentQueryRequest, req: Request):
     """
     Stream agent thinking process to frontend in real-time.
     
     Returns Server-Sent Events (SSE) with agent progress updates.
+    Requires: Authorization: Bearer <token>
     """
-    logger.info(f"AgentRoutes: Starting streaming query: {request.query}")
+    # Get user_id from JWT token
+    user_id = get_current_user(req)
+    logger.info(f"AgentRoutes: Starting streaming query for user {user_id}: {request_data.query}")
     
     async def event_generator():
         try:
@@ -292,11 +296,11 @@ async def stream_agent_query(request: AgentQueryRequest):
             agent = get_agent()
             logger.info("AgentRoutes: Agent instance obtained for streaming")
             
-            # Stream execution events with session support
+            # Stream execution events with session support (use JWT user_id)
             for event in agent.stream_execution(
-                request.query,
-                session_id=request.session_id,
-                user_id=request.user_id
+                request_data.query,
+                session_id=request_data.session_id,
+                user_id=user_id  # Use user_id from JWT token
             ):
                 yield f"data: {json.dumps(event)}\n\n"
                 await asyncio.sleep(0.05)
@@ -439,16 +443,18 @@ async def get_query_examples():
     }
 
 
-@router.post("/clear-session-cache", summary="Clear Session Cache")
-async def clear_session_cache(session_id: Optional[str] = Body(None, embed=True)):
+@router.post("/clear-session-cache", summary="Clear Session Cache", dependencies=[Depends(JWTBearer())])
+async def clear_session_cache(req: Request, session_id: Optional[str] = Body(None, embed=True)):
     """
     Clear session-level data cache for follow-up questions.
     Call this when user starts a new chat to ensure fresh data fetching.
+    Requires: Authorization: Bearer <token>
     
     Args:
         session_id: Optional session ID to clear. If not provided, clears all caches.
     """
-    logger.info(f"AgentRoutes: Clearing session cache for session_id={session_id}")
+    user_id = get_current_user(req)
+    logger.info(f"AgentRoutes: Clearing session cache for user {user_id}, session_id={session_id}")
     
     try:
         agent = get_agent()
@@ -492,3 +498,281 @@ async def get_supported_symbols():
             "note": "The agent automatically determines whether a stock is Indian or global"
         }
     }
+
+
+@router.get("/chat-history", summary="Get User Chat History", dependencies=[Depends(JWTBearer())])
+async def get_chat_history(req: Request):
+    """
+    Get all conversations for the authenticated user.
+    Requires: Authorization: Bearer <token>
+    
+    Returns list of conversations with session_id, title, created_at, updated_at.
+    """
+    user_id = get_current_user(req)
+    logger.info(f"AgentRoutes: Fetching chat history for user {user_id}")
+    
+    try:
+        from database.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Query conversations for this user (RLS will automatically filter)
+        response = supabase.table("conversations")\
+            .select("id, session_id, title, created_at, updated_at")\
+            .eq("user_id", user_id)\
+            .order("updated_at", desc=True)\
+            .execute()
+        
+        return {
+            "status": "success",
+            "conversations": response.data
+        }
+        
+    except Exception as e:
+        logger.error(f"AgentRoutes: Error fetching chat history: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch chat history: {str(e)}"
+        )
+
+
+@router.get("/chat-messages/{session_id}", summary="Get Chat Messages", dependencies=[Depends(JWTBearer())])
+async def get_chat_messages(session_id: str, req: Request):
+    """
+    Get all messages for a specific conversation along with thinking_history.
+    Requires: Authorization: Bearer <token>
+    
+    RLS policies ensure users can only access their own conversations.
+    """
+    user_id = get_current_user(req)
+    logger.info(f"AgentRoutes: Fetching messages for session {session_id}, user {user_id}")
+    
+    try:
+        from database.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Verify session belongs to user and get thinking_history
+        conv_response = supabase.table("conversations")\
+            .select("id, thinking_history")\
+            .eq("session_id", session_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        if not conv_response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Conversation not found or unauthorized"
+            )
+        
+        conversation = conv_response.data[0]
+        thinking_history = conversation.get('thinking_history', []) or []
+        
+        # Fetch messages (RLS will automatically filter)
+        messages_response = supabase.table("messages")\
+            .select("*")\
+            .eq("session_id", session_id)\
+            .order("created_at", desc=False)\
+            .execute()
+        
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "messages": messages_response.data,
+            "thinking_history": thinking_history
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AgentRoutes: Error fetching messages: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch messages: {str(e)}"
+        )
+
+
+@router.delete("/chat-history/{session_id}", summary="Delete Conversation", dependencies=[Depends(JWTBearer())])
+async def delete_conversation(session_id: str, req: Request):
+    """
+    Delete a conversation and all its messages.
+    Requires: Authorization: Bearer <token>
+    
+    RLS policies ensure users can only delete their own conversations.
+    """
+    user_id = get_current_user(req)
+    logger.info(f"AgentRoutes: Deleting conversation {session_id} for user {user_id}")
+    
+    try:
+        from database.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Verify conversation belongs to user
+        conv_response = supabase.table("conversations")\
+            .select("id")\
+            .eq("session_id", session_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        if not conv_response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Conversation not found or unauthorized"
+            )
+        
+        # Delete conversation (messages will cascade delete)
+        delete_response = supabase.table("conversations")\
+            .delete()\
+            .eq("session_id", session_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        return {
+            "status": "success",
+            "message": "Conversation deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AgentRoutes: Error deleting conversation: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete conversation: {str(e)}"
+        )
+
+
+@router.post("/update-conversation-title", summary="Update Conversation Title", dependencies=[Depends(JWTBearer())])
+async def update_conversation_title(req: Request, data: dict = Body(...)):
+    """
+    Update conversation title immediately when first message is sent.
+    This makes the conversation appear in the sidebar right away.
+    
+    Requires: Authorization: Bearer <token>
+    """
+    user_id = get_current_user(req)
+    session_id = data.get('session_id')
+    title = data.get('title')
+    
+    if not session_id or not title:
+        raise HTTPException(
+            status_code=400,
+            detail="session_id and title are required"
+        )
+    
+    logger.info(f"AgentRoutes: Updating title for session {session_id}, user {user_id}")
+    
+    try:
+        from database.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Verify conversation exists and belongs to user
+        conv_response = supabase.table("conversations")\
+            .select("id")\
+            .eq("session_id", session_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        if not conv_response.data:
+            # Conversation doesn't exist yet, create it
+            supabase.table("conversations").insert({
+                'user_id': user_id,
+                'session_id': session_id,
+                'title': title
+            }).execute()
+            logger.info(f"✅ Created conversation with title: {title}")
+        else:
+            # Update existing conversation
+            supabase.table("conversations")\
+                .update({"title": title})\
+                .eq("session_id", session_id)\
+                .eq("user_id", user_id)\
+                .execute()
+            logger.info(f"✅ Updated conversation title: {title}")
+        
+        return {
+            "status": "success",
+            "message": "Conversation title updated"
+        }
+        
+    except Exception as e:
+        logger.error(f"AgentRoutes: Error updating conversation title: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update conversation title: {str(e)}"
+        )
+
+
+@router.post("/save-thinking/{session_id}", summary="Save Thinking Events", dependencies=[Depends(JWTBearer())])
+async def save_thinking_events(session_id: str, req: Request, thinking_data: dict = Body(...)):
+    """
+    Append thinking/streaming events to the conversation's thinking_history.
+    This is called from frontend after each query completion.
+    
+    The thinking_history is an array of all thinking events across all queries in the conversation.
+    We append a separator and the new events after each query.
+    
+    Requires: Authorization: Bearer <token>
+    """
+    user_id = get_current_user(req)
+    logger.info(f"AgentRoutes: Appending thinking for session {session_id}, user {user_id}")
+    
+    try:
+        from database.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Verify conversation belongs to user and get current thinking_history
+        conv_response = supabase.table("conversations")\
+            .select("id, thinking_history")\
+            .eq("session_id", session_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        if not conv_response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Conversation not found or unauthorized"
+            )
+        
+        conversation = conv_response.data[0]
+        current_thinking = conversation.get('thinking_history', []) or []
+        
+        # Get new thinking events from request
+        new_events = thinking_data.get('thinking', [])
+        
+        # If there's existing thinking, add a separator before appending new events
+        if len(current_thinking) > 0 and len(new_events) > 0:
+            separator = {
+                'type': 'status',
+                'step': 'new_query',
+                'message': '─── New Query ───',
+                'progress': 0
+            }
+            current_thinking.append(separator)
+        
+        # Append new events
+        current_thinking.extend(new_events)
+        
+        # Update conversation with appended thinking_history
+        update_response = supabase.table("conversations")\
+            .update({"thinking_history": current_thinking})\
+            .eq("session_id", session_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        logger.info(f"✅ Appended {len(new_events)} thinking events to conversation {session_id}")
+        logger.info(f"   Total thinking events in conversation: {len(current_thinking)}")
+        
+        return {
+            "status": "success",
+            "message": "Thinking events appended successfully",
+            "events_count": len(new_events),
+            "total_events": len(current_thinking)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AgentRoutes: Error saving thinking events: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save thinking events: {str(e)}"
+        )

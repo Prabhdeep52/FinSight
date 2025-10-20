@@ -662,6 +662,7 @@ Use specific numbers from the data. Be thorough but concise."""
             context = self.memory.build_short_term_context(session_id)
             logger.info(f"stream_execution: Context built successfully")
             
+ 
             # Initialize
             yield {
                 'type': 'step',
@@ -670,6 +671,7 @@ Use specific numbers from the data. Be thorough but concise."""
                 'reasoning': 'I am setting up the agent with autonomous tool calling capability. The AI will independently decide which tools to use based on your question.',
                 'progress': 5
             }
+           
             
             state = {
                 "user_query": user_query,
@@ -914,7 +916,9 @@ Use specific numbers from the data. Be thorough but concise."""
             
             assistant_metadata = {
                 "symbols": state['extracted_symbols'],
-                "tools_used": tools_used
+                "tools_used": tools_used,
+                "stock_data": state['stock_data'],
+                "statement_data": state['statement_data']
             }
             
             self.memory.save_message(session_id, "user", user_query, user_metadata)
