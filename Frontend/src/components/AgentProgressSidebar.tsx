@@ -1,8 +1,15 @@
+/** eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import type React from "react";
 import type { StreamEvent } from "../services/streamingService";
-import { X, CheckCircle, XCircle, AlertCircle, SkipForward } from "lucide-react";
+import {
+  X,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  SkipForward,
+} from "lucide-react";
 
 interface AgentProgressSidebarProps {
   events: StreamEvent[];
@@ -48,10 +55,10 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 right-0 h-screen w-full sm:w-96 
-        bg-black/80 backdrop-blur-xl border-l border-white/10 
-        shadow-[0_0_25px_rgba(168,85,247,0.15)] z-50 
-        transition-transform duration-300 ease-in-out 
+        className={`fixed top-0 right-0 h-screen w-full sm:w-96
+        bg-black/80 backdrop-blur-xl border-l border-white/10
+        shadow-[0_0_25px_rgba(168,85,247,0.15)] z-50
+        transition-transform duration-300 ease-in-out
         flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Header */}
@@ -124,6 +131,52 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
             <div className="space-y-3">
               {events.map((event, idx) => (
                 <div key={idx} className="animate-in slide-in-from-right">
+                  {event.type === "news_results" &&
+                    event.data &&
+                    event.data.response === undefined && (
+                      <div className="p-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs font-semibold text-purple-400">
+                            These are the latest news articles about{" "}
+                            {event.symbol}
+                          </p>
+                        </div>
+
+                        {Array.isArray((event as any).data) ? (
+                          <div className="space-y-2">
+                            {(event as any).data.map(
+                              (article: any, i: number) => (
+                                <div
+                                  key={i}
+                                  className="p-2 border border-white/10 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
+                                >
+                                  <a
+                                    href={article.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-white/90 hover:text-purple-400 text-[13px] underline"
+                                  >
+                                    {article.title}
+                                  </a>
+                                  {article.snippet && (
+                                    <p className="text-white/60 text-[12px] mt-1 leading-snug">
+                                      {article.snippet.length > 120
+                                        ? article.snippet.slice(0, 120) + "..."
+                                        : article.snippet}
+                                    </p>
+                                  )}
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-white/50 italic">
+                            No articles available
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                   {event.step === "new_query" ? (
                     <div className="py-4">
                       <div className="flex items-center gap-3 mb-2">
@@ -162,9 +215,7 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
                         )}
                         {event.tool && (
                           <p className="text-white/40 mt-1">
-                            {event.tool
-                              .replace("get_", "")
-                              .replace(/_/g, " ")}
+                            {event.tool.replace("get_", "").replace(/_/g, " ")}
                           </p>
                         )}
                         {event.reasoning && (

@@ -610,6 +610,7 @@ Remember: Explain first, then call all tools NOW!"""
     ## Investment Recommendation
     Clear recommendation with rationale
     analyse news articles and market sentiment to provide a comprehensive analysis.
+    Explain what are news articles telling us about the company's financial situation and sentiments.
     if some data is missing , dont write that section ,also if user is asking a general question then dont follow the structure , just ans the question directly.
     Use specific numbers from the data. Be thorough but concise."""
 
@@ -726,6 +727,50 @@ Remember: Explain first, then call all tools NOW!"""
                     context_parts.append(
                         f"EPS Surprise: ${latest.get('surprise', 'N/A')}"
                     )
+
+            # NEWS SECTION - Adding first 500 characters from articles
+            news_info = state.get("news_data", {}).get(symbol)
+            if news_info and isinstance(news_info, list):
+                context_parts.append("\nRecent News Highlights:")
+                token_budget = 2500  # adjustable max per symbol
+                used_tokens = 0
+
+                for article in news_info[:5]:  # limit to 5 articles
+                    title = article.get("title", "").strip()
+                    snippet = article.get("snippet", "").strip()
+                    content = article.get("content", "").strip()
+                    url = article.get("url", "")
+
+                    # Approximate token count (1 token ≈ 4 chars)
+                    def count_tokens(text):
+                        return len(text) / 4
+
+                        # Each article: title (20 tokens) + up to 600 chars (150 tokens)
+
+                    article_text = ""
+
+                    if title:
+                        article_text += f"- {title}\n"
+
+                        # Prefer full article content if available
+                    if content:
+                        trimmed = content[:600]
+                        article_text += f"  {trimmed}...\n"
+                        used_tokens += count_tokens(trimmed)
+                    elif snippet:
+                        trimmed = snippet[:180]
+                        article_text += f"  {trimmed}...\n"
+                        used_tokens += count_tokens(trimmed)
+
+                    if url:
+                        article_text += f"  Source: {url}\n"
+
+                    context_parts.append(article_text)
+
+                    # Stop adding more once token budget is hit
+                    if used_tokens > token_budget:
+                        context_parts.append("...(news truncated for token safety)...")
+                        break
 
         return "\n".join(context_parts)
 
@@ -1003,28 +1048,30 @@ Remember: Explain first, then call all tools NOW!"""
             if state.get("news_data"):
                 for symbol, articles in state["news_data"].items():
                     try:
-                        # Parse if string
                         parsed_articles = (
                             json.loads(articles)
                             if isinstance(articles, str)
                             else articles
                         )
+
                         formatted_articles = []
-                        for a in parsed_articles:
-                            formatted_articles.append(
-                                {
-                                    "title": a.get("title"),
-                                    "url": a.get("href") or a.get("url"),
-                                    "snippet": a.get("body") or a.get("snippet", ""),
-                                }
-                            )
+                        for article in parsed_articles:
+                            title = article.get("title", "").strip()
+                            url = article.get("href") or article.get("url")
+                            snippet = article.get("body", "").strip()
+
+                            if title and url:
+                                formatted_articles.append(
+                                    {"title": title, "url": url, "snippet": snippet}
+                                )
 
                         if formatted_articles:
+                            print("yielding formatted articles")
                             yield {
                                 "type": "news_results",
                                 "symbol": symbol,
                                 "message": f"Found {len(formatted_articles)} news articles for {symbol}",
-                                "data": formatted_articles,
+                                "data": formatted_articles,  # contains full title + url
                                 "reasoning": "These are the latest headlines and links about the company from DuckDuckGo News.",
                                 "progress": 72,
                             }
