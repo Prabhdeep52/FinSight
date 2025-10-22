@@ -610,7 +610,7 @@ Remember: Explain first, then call all tools NOW!"""
     ## Investment Recommendation
     Clear recommendation with rationale
     analyse news articles and market sentiment to provide a comprehensive analysis.
-    Explain what are news articles telling us about the company's financial situation and sentiments.
+    create a sections where you explain what are news articles telling us about the company's financial situation and sentiments and latest events.
     if some data is missing , dont write that section ,also if user is asking a general question then dont follow the structure , just ans the question directly.
     Use specific numbers from the data. Be thorough but concise."""
 
