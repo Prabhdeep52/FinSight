@@ -122,7 +122,7 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
         )}
 
         {/* Event Timeline */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
           {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-white/40">
               <p className="text-xs">Waiting for agent to start...</p>

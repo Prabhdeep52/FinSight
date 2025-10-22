@@ -452,6 +452,9 @@ Remember: Explain first, then call all tools NOW!"""
 
                 data_type = tool_name.replace("get_", "")
                 state["statement_data"][symbol][data_type] = result_data
+            print(
+                f"DEBUG: Current state after {tool_name} for {symbol}: stock_data keys={state['stock_data'].keys()}, statement_data keys={state['statement_data'].keys()}"
+            )
 
         except Exception as e:
             logger.error(f"Error storing result for {tool_name}({symbol}): {e}")

@@ -61,10 +61,10 @@ export interface EarningsData {
  * Extract metrics from Income Statement
  */
 export const extractIncomeMetrics = (
-  statementData: Record<string, any>
+  statementData: Record<string, any>,
 ): IncomeMetrics => {
   const income =
-    statementData?.income_statement?.[0] ||
+    statementData?.income_statement?.data?.annualReports?.[0] ||
     statementData?.annualReports?.[0] ||
     {};
 
@@ -82,7 +82,7 @@ export const extractIncomeMetrics = (
     grossMargin:
       revenue && grossProfit !== null ? (grossProfit / revenue) * 100 : null,
     operatingExpenses: parseFinancialValue(
-      income.operatingExpenses || income.sellingGeneralAdministrative
+      income.operatingExpenses || income.sellingGeneralAdministrative,
     ),
     operatingIncome,
     operatingMargin:
@@ -95,8 +95,7 @@ export const extractIncomeMetrics = (
     netMargin:
       revenue && netIncome !== null ? (netIncome / revenue) * 100 : null,
     ebitda,
-    ebitdaMargin:
-      revenue && ebitda !== null ? (ebitda / revenue) * 100 : null,
+    ebitdaMargin: revenue && ebitda !== null ? (ebitda / revenue) * 100 : null,
     eps: parseFinancialValue(income.dilutedEPS || income.eps),
   };
 };
@@ -105,27 +104,29 @@ export const extractIncomeMetrics = (
  * Extract metrics from Balance Sheet
  */
 export const extractBalanceSheetMetrics = (
-  statementData: Record<string, any>
+  statementData: Record<string, any>,
 ): BalanceSheetMetrics => {
   const balance =
-    statementData?.balance_sheet?.[0] ||
+    statementData?.balance_sheet?.data?.annualReports?.[0] ||
     statementData?.annualReports?.[0] ||
     {};
 
   const currentAssets = parseFinancialValue(balance.totalCurrentAssets);
-  const currentLiabilities = parseFinancialValue(balance.totalCurrentLiabilities);
+  const currentLiabilities = parseFinancialValue(
+    balance.totalCurrentLiabilities,
+  );
   const totalAssets = parseFinancialValue(balance.totalAssets);
   const totalLiabilities = parseFinancialValue(balance.totalLiabilities);
   const shareholderEquity = parseFinancialValue(balance.totalShareholderEquity);
   const cash = parseFinancialValue(
-    balance.cashAndCashEquivalentsAtCarryingValue || balance.cash
+    balance.cashAndCashEquivalentsAtCarryingValue || balance.cash,
   );
   const inventory = parseFinancialValue(balance.inventory);
   const receivables = parseFinancialValue(
-    balance.currentNetReceivables || balance.accountsReceivable
+    balance.currentNetReceivables || balance.accountsReceivable,
   );
   const totalDebt = parseFinancialValue(
-    balance.shortLongTermDebtTotal || balance.totalDebt
+    balance.shortLongTermDebtTotal || balance.totalDebt,
   );
   const longTermDebt = parseFinancialValue(balance.longTermDebt);
 
@@ -161,18 +162,18 @@ export const extractBalanceSheetMetrics = (
  * Extract metrics from Cash Flow Statement
  */
 export const extractCashFlowMetrics = (
-  statementData: Record<string, any>
+  statementData: Record<string, any>,
 ): CashFlowMetrics => {
   const cashFlow =
-    statementData?.cash_flow?.[0] ||
+    statementData?.cash_flow?.data?.annualReports?.[0] ||
     statementData?.annualReports?.[0] ||
     {};
 
   const operatingCashFlow = parseFinancialValue(
-    cashFlow.operatingCashflow || cashFlow.operatingActivitiesNetCash
+    cashFlow.operatingCashflow || cashFlow.operatingActivitiesNetCash,
   );
   const capex = parseFinancialValue(
-    cashFlow.capitalExpenditures || cashFlow.capitalExpenditure
+    cashFlow.capitalExpenditures || cashFlow.capitalExpenditure,
   );
 
   const freeCashFlow =
@@ -181,25 +182,23 @@ export const extractCashFlowMetrics = (
       : null;
 
   const revenue = parseFinancialValue(
-    statementData?.income_statement?.[0]?.totalRevenue
+    statementData?.income_statement?.[0]?.totalRevenue,
   );
 
   return {
     operatingCashFlow,
     investingCashFlow: parseFinancialValue(
-      cashFlow.cashflowFromInvestment || cashFlow.investingCashflow
+      cashFlow.cashflowFromInvestment || cashFlow.investingCashflow,
     ),
     financingCashFlow: parseFinancialValue(
-      cashFlow.cashflowFromFinancing || cashFlow.financingCashflow
+      cashFlow.cashflowFromFinancing || cashFlow.financingCashflow,
     ),
     capex,
     freeCashFlow,
     fcfMargin:
-      freeCashFlow !== null && revenue
-        ? (freeCashFlow / revenue) * 100
-        : null,
+      freeCashFlow !== null && revenue ? (freeCashFlow / revenue) * 100 : null,
     dividendsPaid: parseFinancialValue(
-      cashFlow.dividendPayout || cashFlow.dividendsPaid
+      cashFlow.dividendPayout || cashFlow.dividendsPaid,
     ),
   };
 };
@@ -208,18 +207,16 @@ export const extractCashFlowMetrics = (
  * Extract EPS Surprise Data
  */
 export const extractEarningsData = (
-  statementData: Record<string, any>
+  statementData: Record<string, any>,
 ): EarningsData[] => {
-  const earnings = statementData?.earnings?.quarterlyEarnings || [];
+  const earnings = statementData?.earnings?.data?.quarterlyEarnings || [];
 
   return earnings.slice(0, 8).map((q: Record<string, any>) => {
     const reported = parseFinancialValue(q.reportedEPS);
     const estimated = parseFinancialValue(q.estimatedEPS);
 
     const surprise =
-      reported !== null && estimated !== null
-        ? reported - estimated
-        : null;
+      reported !== null && estimated !== null ? reported - estimated : null;
 
     const surprisePercent =
       surprise !== null && estimated !== null && estimated !== 0

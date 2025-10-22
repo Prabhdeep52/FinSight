@@ -1,4 +1,9 @@
-import React, { useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { MessageSquare, Trash2, Plus, X } from "lucide-react";
 
 interface Conversation {
@@ -37,7 +42,7 @@ export const ChatHistorySidebar = forwardRef<
       userId,
       accessToken,
     },
-    ref
+    ref,
   ) => {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(false);
@@ -56,7 +61,7 @@ export const ChatHistorySidebar = forwardRef<
           "http://localhost:8000/api/v1/agent/chat-history",
           {
             headers: { Authorization: `Bearer ${accessToken}` },
-          }
+          },
         );
         if (!response.ok) throw new Error("Failed to fetch chat history");
         const data = await response.json();
@@ -81,7 +86,7 @@ export const ChatHistorySidebar = forwardRef<
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${accessToken}` },
-          }
+          },
         );
         if (response.ok) {
           fetchChatHistory();
@@ -118,13 +123,14 @@ export const ChatHistorySidebar = forwardRef<
 
         {/* Sidebar */}
         <div
-          className={`fixed left-0 top-0 h-full w-80 bg-black/80 
-          backdrop-blur-xl border-r border-white/10 
-          shadow-[0_0_25px_rgba(168,85,247,0.15)] z-50 
-          transform transition-transform duration-300 
+          className={`fixed left-0 top-0 h-full w-80 bg-black/80
+          backdrop-blur-xl border-r border-white/10
+          shadow-[0_0_25px_rgba(168,85,247,0.15)] z-50
+          transform transition-transform duration-300
+          no-scrollbar
           ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full no-scrollbar">
             {/* Header */}
             <div className="p-4 border-b border-white/10 bg-white/5 backdrop-blur-sm">
               <div className="flex items-center justify-between mb-4">
@@ -150,59 +156,62 @@ export const ChatHistorySidebar = forwardRef<
               </button>
             </div>
 
-{/* Chat List */}
-<div className="flex-1 overflow-y-auto p-3">
-  {loading && (
-    <div className="text-center text-white/50 py-4 text-sm">
-      Loading Analysis...
-    </div>
-  )}
-  {error && (
-    <div className="text-center text-red-400 py-4 text-sm">{error}</div>
-  )}
-  {!loading && !error && conversations.length === 0 && (
-    <div className="text-center text-white/40 py-8">
-      <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-40" />
-      <p className="text-sm">No Analysis yet</p>
-      <p className="text-xs mt-1 text-white/40">Start a new chat to begin</p>
-    </div>
-  )}
+            {/* Chat List */}
+            <div className="flex-1 overflow-y-auto p-3 no-scrollbar">
+              {loading && (
+                <div className="text-center text-white/50 py-4 text-sm">
+                  Loading Analysis...
+                </div>
+              )}
+              {error && (
+                <div className="text-center text-red-400 py-4 text-sm">
+                  {error}
+                </div>
+              )}
+              {!loading && !error && conversations.length === 0 && (
+                <div className="text-center text-white/40 py-8">
+                  <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No Analysis yet</p>
+                  <p className="text-xs mt-1 text-white/40">
+                    Start a new chat to begin
+                  </p>
+                </div>
+              )}
 
-  {!loading && conversations.length > 0 && (
-    <div className="space-y-1.5">
-      {conversations.map((conv) => (
-        <div
-          key={conv.session_id}
-          onClick={() => {
-            onSelectChat(conv.session_id);
-            onClose();
-          }}
-          className={`group flex items-center justify-between px-2.5 py-2 rounded-md cursor-pointer transition-all border text-sm ${
-            conv.session_id === currentSessionId
-              ? "bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30"
-              : "bg-white/5 hover:bg-white/10 border-transparent"
-          }`}
-        >
-          <div className="flex-1 min-w-0">
-            <h3 className="text-white/90 font-medium truncate text-[13px] leading-snug">
-              {conv.title}
-            </h3>
-            <p className="text-white/50 text-[11px] leading-tight mt-0.5">
-              {formatDate(conv.updated_at)}
-            </p>
-          </div>
-          <button
-            onClick={(e) => handleDeleteChat(conv.session_id, e)}
-            className="opacity-0 group-hover:opacity-100 p-1 text-white/40 hover:text-red-400 transition-opacity flex-shrink-0"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
+              {!loading && conversations.length > 0 && (
+                <div className="space-y-1.5">
+                  {conversations.map((conv) => (
+                    <div
+                      key={conv.session_id}
+                      onClick={() => {
+                        onSelectChat(conv.session_id);
+                        onClose();
+                      }}
+                      className={`group flex items-center justify-between px-2.5 py-2 rounded-md cursor-pointer transition-all border text-sm ${
+                        conv.session_id === currentSessionId
+                          ? "bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30"
+                          : "bg-white/5 hover:bg-white/10 border-transparent"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white/90 font-medium truncate text-[13px] leading-snug">
+                          {conv.title}
+                        </h3>
+                        <p className="text-white/50 text-[11px] leading-tight mt-0.5">
+                          {formatDate(conv.updated_at)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => handleDeleteChat(conv.session_id, e)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-white/40 hover:text-red-400 transition-opacity flex-shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Footer */}
             <div className="p-4 border-t border-white/10 text-center text-xs text-white/40">
@@ -213,7 +222,7 @@ export const ChatHistorySidebar = forwardRef<
         </div>
       </>
     );
-  }
+  },
 );
 
 ChatHistorySidebar.displayName = "ChatHistorySidebar";
