@@ -5,7 +5,7 @@ import React, {
   forwardRef,
 } from "react";
 import { MessageSquare, Trash2, Plus, X } from "lucide-react";
-
+import { BACKEND_URL } from "../contexts/settings";
 interface Conversation {
   id: number;
   session_id: string;
@@ -58,7 +58,7 @@ export const ChatHistorySidebar = forwardRef<
       setError(null);
       try {
         const response = await fetch(
-          "http://localhost:8000/api/v1/agent/chat-history",
+          `${BACKEND_URL}/api/v1/agent/chat-history`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           },
@@ -82,7 +82,7 @@ export const ChatHistorySidebar = forwardRef<
 
       try {
         const response = await fetch(
-          `http://localhost:8000/api/v1/agent/chat-history/${sessionId}`,
+          `${BACKEND_URL}/api/v1/agent/chat-history/${sessionId}`,
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${accessToken}` },

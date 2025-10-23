@@ -123,7 +123,7 @@ class FinancialLangGraphAgent:
         # Create the graph
         workflow = StateGraph(AgentState)
 
-        # Add nodes
+        # Add
         logger.info("FinancialLangGraphAgent: Adding workflow nodes")
         workflow.add_node("parse_query", self._parse_query_node)
         workflow.add_node("execute_tools", self._execute_tools_node)

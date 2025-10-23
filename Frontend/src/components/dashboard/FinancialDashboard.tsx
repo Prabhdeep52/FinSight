@@ -1,9 +1,12 @@
+"use client";
+
 import React, { useMemo } from "react";
 import { OverviewCard } from "./sections/OverviewCard";
 import { IncomeStatementTable } from "./sections/IncomeStatementTable";
 import { BalanceSheetTable } from "./sections/BalanceSheetTable";
 import { CashFlowTable } from "./sections/CashFlowTable";
 import { EarningsTable } from "./sections/EarningsTable";
+import { NewsSidebar } from "./sections/NewsSidebar";
 import {
   extractIncomeMetrics,
   extractBalanceSheetMetrics,
@@ -20,6 +23,7 @@ interface Stock {
   symbol: string;
   stockData: Record<string, unknown>;
   statementData: Record<string, unknown>;
+  events?: any[];
 }
 
 interface FinancialDashboardProps {
@@ -30,6 +34,21 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
   stocks,
 }) => {
   const isComparison = stocks.length === 2;
+
+  // Helper function to check if a metrics object has valid data
+  const hasValidData = (
+    metrics: Record<string, any> | null | undefined,
+  ): boolean => {
+    if (!metrics) return false;
+    return Object.values(metrics).some(
+      (value) =>
+        value !== null &&
+        value !== undefined &&
+        value !== "N/A" &&
+        value !== "" &&
+        !Number.isNaN(value),
+    );
+  };
 
   // Extract metrics for each stock
   const stock1Metrics = useMemo(() => {
@@ -61,71 +80,76 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
     const stock1Results: Record<string, ComparisonResult> = {};
     const stock2Results: Record<string, ComparisonResult> = {};
 
-    // Income statement comparisons (higher is better for most)
-    const revenueComp = compareHigherBetter(
+    const addComparison = (
+      key: string,
+      compFunc: (a: number, b: number) => any,
+      a: any,
+      b: any,
+    ) => {
+      const res = compFunc(a, b);
+      stock1Results[key] = res.stock1Result;
+      stock2Results[key] = res.stock2Result;
+    };
+
+    // Income comparisons
+    addComparison(
+      "revenue",
+      compareHigherBetter,
       stock1Metrics.income.revenue,
       stock2Metrics.income.revenue,
     );
-    stock1Results.revenue = revenueComp.stock1Result;
-    stock2Results.revenue = revenueComp.stock2Result;
-
-    const grossMarginComp = compareHigherBetter(
+    addComparison(
+      "grossMargin",
+      compareHigherBetter,
       stock1Metrics.income.grossMargin,
       stock2Metrics.income.grossMargin,
     );
-    stock1Results.grossMargin = grossMarginComp.stock1Result;
-    stock2Results.grossMargin = grossMarginComp.stock2Result;
-
-    const operatingMarginComp = compareHigherBetter(
+    addComparison(
+      "operatingMargin",
+      compareHigherBetter,
       stock1Metrics.income.operatingMargin,
       stock2Metrics.income.operatingMargin,
     );
-    stock1Results.operatingMargin = operatingMarginComp.stock1Result;
-    stock2Results.operatingMargin = operatingMarginComp.stock2Result;
-
-    const netMarginComp = compareHigherBetter(
+    addComparison(
+      "netMargin",
+      compareHigherBetter,
       stock1Metrics.income.netMargin,
       stock2Metrics.income.netMargin,
     );
-    stock1Results.netMargin = netMarginComp.stock1Result;
-    stock2Results.netMargin = netMarginComp.stock2Result;
-
-    const ebitdaComp = compareHigherBetter(
+    addComparison(
+      "ebitda",
+      compareHigherBetter,
       stock1Metrics.income.ebitda,
       stock2Metrics.income.ebitda,
     );
-    stock1Results.ebitda = ebitdaComp.stock1Result;
-    stock2Results.ebitda = ebitdaComp.stock2Result;
 
-    // Balance sheet comparisons
-    const currentRatioComp = compareHigherBetter(
+    // Balance comparisons
+    addComparison(
+      "currentRatio",
+      compareHigherBetter,
       stock1Metrics.balance.currentRatio,
       stock2Metrics.balance.currentRatio,
     );
-    stock1Results.currentRatio = currentRatioComp.stock1Result;
-    stock2Results.currentRatio = currentRatioComp.stock2Result;
-
-    const debtToEquityComp = compareLowerBetter(
+    addComparison(
+      "debtToEquity",
+      compareLowerBetter,
       stock1Metrics.balance.debtToEquity,
       stock2Metrics.balance.debtToEquity,
     );
-    stock1Results.debtToEquity = debtToEquityComp.stock1Result;
-    stock2Results.debtToEquity = debtToEquityComp.stock2Result;
 
     // Cash flow comparisons
-    const fcfComp = compareHigherBetter(
+    addComparison(
+      "freeCashFlow",
+      compareHigherBetter,
       stock1Metrics.cashFlow.freeCashFlow,
       stock2Metrics.cashFlow.freeCashFlow,
     );
-    stock1Results.freeCashFlow = fcfComp.stock1Result;
-    stock2Results.freeCashFlow = fcfComp.stock2Result;
-
-    const fcfMarginComp = compareHigherBetter(
+    addComparison(
+      "fcfMargin",
+      compareHigherBetter,
       stock1Metrics.cashFlow.fcfMargin,
       stock2Metrics.cashFlow.fcfMargin,
     );
-    stock1Results.fcfMargin = fcfMarginComp.stock1Result;
-    stock2Results.fcfMargin = fcfMarginComp.stock2Result;
 
     return { stock1: stock1Results, stock2: stock2Results };
   }, [isComparison, stock1Metrics, stock2Metrics]);
@@ -147,15 +171,34 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
           stockData={stocks[0].stockData}
         />
 
-        <IncomeStatementTable metrics={stock1Metrics.income} />
-        <BalanceSheetTable metrics={stock1Metrics.balance} />
-        <CashFlowTable metrics={stock1Metrics.cashFlow} />
-        <EarningsTable earningsData={stock1Metrics.earnings} />
+        {hasValidData(stock1Metrics.income) && (
+          <IncomeStatementTable metrics={stock1Metrics.income} />
+        )}
+
+        {hasValidData(stock1Metrics.balance) && (
+          <BalanceSheetTable metrics={stock1Metrics.balance} />
+        )}
+
+        {hasValidData(stock1Metrics.cashFlow) && (
+          <CashFlowTable metrics={stock1Metrics.cashFlow} />
+        )}
+
+        {hasValidData(stock1Metrics.earnings) && (
+          <EarningsTable earningsData={stock1Metrics.earnings} />
+        )}
+
+        {/* Integrated News Section */}
+        {stocks[0].events && stocks[0].events.length > 0 && (
+          <NewsSidebar
+            events={stocks[0].events}
+            heading={`Latest News on ${stocks[0].symbol}`}
+          />
+        )}
       </div>
     );
   }
 
-  // Comparison view (side-by-side)
+  // Comparison view
   return (
     <div className="h-full overflow-y-auto p-6 no-scrollbar">
       <div className="grid grid-cols-2 gap-6">
@@ -166,25 +209,40 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
             stockData={stocks[0].stockData}
           />
 
-          <IncomeStatementTable
-            metrics={stock1Metrics.income}
-            comparisonResults={comparisonResults.stock1}
-            isComparison={true}
-          />
+          {hasValidData(stock1Metrics.income) && (
+            <IncomeStatementTable
+              metrics={stock1Metrics.income}
+              comparisonResults={comparisonResults.stock1}
+              isComparison
+            />
+          )}
 
-          <BalanceSheetTable
-            metrics={stock1Metrics.balance}
-            comparisonResults={comparisonResults.stock1}
-            isComparison={true}
-          />
+          {hasValidData(stock1Metrics.balance) && (
+            <BalanceSheetTable
+              metrics={stock1Metrics.balance}
+              comparisonResults={comparisonResults.stock1}
+              isComparison
+            />
+          )}
 
-          <CashFlowTable
-            metrics={stock1Metrics.cashFlow}
-            comparisonResults={comparisonResults.stock1}
-            isComparison={true}
-          />
+          {hasValidData(stock1Metrics.cashFlow) && (
+            <CashFlowTable
+              metrics={stock1Metrics.cashFlow}
+              comparisonResults={comparisonResults.stock1}
+              isComparison
+            />
+          )}
 
-          <EarningsTable earningsData={stock1Metrics.earnings} />
+          {hasValidData(stock1Metrics.earnings) && (
+            <EarningsTable earningsData={stock1Metrics.earnings} />
+          )}
+
+          {stocks[0].events && stocks[0].events.length > 0 && (
+            <NewsSidebar
+              events={stocks[0].events}
+              heading={`News: ${stocks[0].symbol}`}
+            />
+          )}
         </div>
 
         {/* Stock 2 Column */}
@@ -194,25 +252,40 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
             stockData={stocks[1].stockData}
           />
 
-          <IncomeStatementTable
-            metrics={stock2Metrics!.income}
-            comparisonResults={comparisonResults.stock2}
-            isComparison={true}
-          />
+          {hasValidData(stock2Metrics!.income) && (
+            <IncomeStatementTable
+              metrics={stock2Metrics!.income}
+              comparisonResults={comparisonResults.stock2}
+              isComparison
+            />
+          )}
 
-          <BalanceSheetTable
-            metrics={stock2Metrics!.balance}
-            comparisonResults={comparisonResults.stock2}
-            isComparison={true}
-          />
+          {hasValidData(stock2Metrics!.balance) && (
+            <BalanceSheetTable
+              metrics={stock2Metrics!.balance}
+              comparisonResults={comparisonResults.stock2}
+              isComparison
+            />
+          )}
 
-          <CashFlowTable
-            metrics={stock2Metrics!.cashFlow}
-            comparisonResults={comparisonResults.stock2}
-            isComparison={true}
-          />
+          {hasValidData(stock2Metrics!.cashFlow) && (
+            <CashFlowTable
+              metrics={stock2Metrics!.cashFlow}
+              comparisonResults={comparisonResults.stock2}
+              isComparison
+            />
+          )}
 
-          <EarningsTable earningsData={stock2Metrics!.earnings} />
+          {hasValidData(stock2Metrics!.earnings) && (
+            <EarningsTable earningsData={stock2Metrics!.earnings} />
+          )}
+
+          {stocks[1].events && stocks[1].events.length > 0 && (
+            <NewsSidebar
+              events={stocks[1].events}
+              heading={`News: ${stocks[1].symbol}`}
+            />
+          )}
         </div>
       </div>
     </div>

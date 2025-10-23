@@ -2,7 +2,7 @@
  * Streaming service for real-time agent progress updates
  * Uses Server-Sent Events (SSE) to stream agent thinking process
  */
-
+import { BACKEND_URL } from "../contexts/settings";
 export interface StreamEventData {
   response?: string;
   symbols_analyzed?: string[];
@@ -35,7 +35,7 @@ export interface StreamEvent {
   data?: StreamEventData;
 }
 
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const API_BASE_URL = `${BACKEND_URL}/api/v1`;
 
 export const streamAgentQuery = async (
   query: string,

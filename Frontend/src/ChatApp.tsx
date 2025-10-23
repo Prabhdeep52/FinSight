@@ -16,6 +16,7 @@ import { useAuth } from "./contexts/AuthContext";
 import ChatHeader from "./chat-header";
 import ChatMessages from "./chat-messages";
 import ChatInput from "./chat-input";
+import { BACKEND_URL } from "./contexts/settings";
 import { FinancialDashboard } from "./components/dashboard/FinancialDashboard";
 import { AgentProgressSidebar } from "./components/AgentProgressSidebar";
 import {
@@ -50,8 +51,6 @@ type ChatMessage = {
   timestamp: Date;
   isError?: boolean;
 };
-
-const API_ENDPOINT = "http://localhost:8000/api/v1/agent/query";
 
 export default function ChatApp() {
   const { userId, accessToken, logout } = useAuth();
@@ -139,23 +138,20 @@ export default function ChatApp() {
 
     if (messages.length === 0 && accessToken) {
       try {
-        await fetch(
-          `http://localhost:8000/api/v1/agent/update-conversation-title`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              session_id: sessionId,
-              title:
-                userQuery.length > 60
-                  ? userQuery.substring(0, 57) + "..."
-                  : userQuery,
-            }),
+        await fetch(`${BACKEND_URL}/api/v1/agent/update-conversation-title`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
-        );
+          body: JSON.stringify({
+            session_id: sessionId,
+            title:
+              userQuery.length > 60
+                ? userQuery.substring(0, 57) + "..."
+                : userQuery,
+          }),
+        });
         console.log("✅ Updated conversation title");
         chatHistorySidebarRef.current?.refresh();
       } catch (err) {
@@ -203,7 +199,7 @@ export default function ChatApp() {
           try {
             if (accessToken && currentQueryEvents.length > 0) {
               await fetch(
-                `http://localhost:8000/api/v1/agent/save-thinking/${sessionId}`,
+                `${BACKEND_URL}/api/v1/agent/save-thinking/${sessionId}`,
                 {
                   method: "POST",
                   headers: {
@@ -272,7 +268,7 @@ export default function ChatApp() {
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
-      await fetch("http://localhost:8000/api/v1/agent/clear-session-cache", {
+      await fetch("${BACKEND_URL}/api/v1/agent/clear-session-cache", {
         method: "POST",
         headers,
         body: JSON.stringify({ session_id: sessionId }),
@@ -302,7 +298,7 @@ export default function ChatApp() {
     if (!accessToken) return;
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/agent/chat-messages/${selectedSessionId}`,
+        `${BACKEND_URL}/api/v1/agent/chat-messages/${selectedSessionId}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

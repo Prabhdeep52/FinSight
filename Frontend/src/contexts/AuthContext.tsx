@@ -1,7 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { BACKEND_URL } from "./settings";
 interface AuthContextType {
   isAuthenticated: boolean;
   userId: string | null;
@@ -19,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
@@ -38,9 +44,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check for existing token on mount
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const storedUserId = localStorage.getItem('user_id');
-    const storedEmail = localStorage.getItem('email');
+    const token = localStorage.getItem("access_token");
+    const storedUserId = localStorage.getItem("user_id");
+    const storedEmail = localStorage.getItem("email");
 
     if (token && storedUserId) {
       // Verify token is still valid
@@ -50,11 +56,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const verifyToken = async (token: string, userId: string, userEmail: string | null) => {
+  const verifyToken = async (
+    token: string,
+    userId: string,
+    userEmail: string | null,
+  ) => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/me', {
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -69,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         clearAuth();
       }
     } catch (err) {
-      console.error('Token verification failed:', err);
+      console.error("Token verification failed:", err);
       clearAuth();
     } finally {
       setLoading(false);
@@ -81,26 +91,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/signin', {
-        method: 'POST',
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/signin`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+        throw new Error(errorData.detail || "Login failed");
       }
 
       const data = await response.json();
 
       // Store auth data
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_id', data.user_id);
-      localStorage.setItem('email', data.email);
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      localStorage.setItem("user_id", data.user_id);
+      localStorage.setItem("email", data.email);
 
       // Update state
       setAccessToken(data.access_token);
@@ -120,26 +130,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/signup', {
-        method: 'POST',
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/signup`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Signup failed');
+        throw new Error(errorData.detail || "Signup failed");
       }
 
       const data = await response.json();
 
       // Store auth data (auto-logged in after signup)
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_id', data.user_id);
-      localStorage.setItem('email', data.email);
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      localStorage.setItem("user_id", data.user_id);
+      localStorage.setItem("email", data.email);
 
       // Update state
       setAccessToken(data.access_token);
@@ -159,10 +169,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const clearAuth = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('email');
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("email");
     setAccessToken(null);
     setUserId(null);
     setEmail(null);
