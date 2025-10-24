@@ -6,6 +6,13 @@
 **Data Sources:** Financial APIs · DuckDuckGo News · PostgreSQL (memory store)
 
 ---
+## Demo
+| | |
+|:--:|:--:|
+| <img src="https://github.com/user-attachments/assets/8248b404-ad92-405c-8933-da03d36e3227" width="1350"/> | <img src="https://github.com/user-attachments/assets/d8633c75-5d9d-4433-870a-89d45200f12b" width="400"/> |
+
+
+---
 
 ## Overview
 
