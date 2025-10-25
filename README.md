@@ -1,4 +1,4 @@
-# InvestIQ — Autonomous Financial Research Agent
+# FinSight — Autonomous Financial Research Agent
 
 ### AI-powered multi-tool financial analysis system
 **Backend:** FastAPI · LangChain · Google Gemini API
@@ -9,7 +9,7 @@
 
 ## Overview
 
-**InvestIQ** is an autonomous financial research agent that performs comprehensive, end-to-end analysis of public companies based on natural language queries.
+**FinSight** is an autonomous financial research agent that performs comprehensive, end-to-end analysis of public companies based on natural language queries.
 
 When a user asks a question such as *"How is Amazon performing recently?"*, the agent:
 

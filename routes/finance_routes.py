@@ -1,7 +1,8 @@
 """
-FastAPI routes for InvestIQ financial agent system.
+FastAPI routes for FinSight financial agent system.
 Defines API endpoints for accessing stock data and system health.
 """
+
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from core.utils import logger
 # Response models for API documentation
 class StockDataResponse(BaseModel):
     """Response model for stock data."""
+
     symbol: str
     name: Optional[str] = None
     current_price: Optional[float] = None
@@ -21,7 +23,7 @@ class StockDataResponse(BaseModel):
     eps: Optional[float] = None
     currency: Optional[str] = None
     data_source: Optional[str] = None
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -32,13 +34,14 @@ class StockDataResponse(BaseModel):
                 "pe_ratio": 28.5,
                 "eps": 5.89,
                 "currency": "USD",
-                "data_source": "alpha_vantage"
+                "data_source": "alpha_vantage",
             }
         }
 
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
+
     overall_status: str
     components: Dict[str, Any]
     agent_version: str
@@ -46,6 +49,7 @@ class HealthResponse(BaseModel):
 
 class MarketInfoResponse(BaseModel):
     """Response model for market information."""
+
     symbol: str
     market_type: str
     data_source: str
@@ -61,7 +65,7 @@ financial_agent = FinancialAgent()
 async def root():
     """Root endpoint with API information."""
     return {
-        "name": "InvestIQ Financial Agent API",
+        "name": "FinSight Financial Agent API",
         "version": "1.0.0",
         "description": "Fetch financial data for Indian and global stocks",
         "endpoints": {
@@ -69,8 +73,8 @@ async def root():
             "/stocks": "Get financial data for multiple stock symbols",
             "/market-info/{symbol}": "Get market classification for a symbol",
             "/health": "Health check for all APIs",
-            "/supported-markets": "Information about supported markets"
-        }
+            "/supported-markets": "Information about supported markets",
+        },
     }
 
 
@@ -78,25 +82,25 @@ async def root():
 async def get_stock_data(symbol: str):
     """
     Get comprehensive financial data for a stock symbol.
-    
+
     - **symbol**: Stock symbol (e.g., AAPL, INFY, GOOGL)
-    
+
     Automatically detects if the symbol is from Indian or global markets
     and routes to the appropriate data source.
     """
     try:
         logger.info(f"API request for stock symbol: {symbol}")
-        
+
         data = await asyncio.to_thread(financial_agent.fetch_stock_data, symbol)
-        
-        if data.get('error'):
+
+        if data.get("error"):
             raise HTTPException(
-                status_code=400, 
-                detail=data.get('message', 'Failed to fetch stock data')
+                status_code=400,
+                detail=data.get("message", "Failed to fetch stock data"),
             )
-        
+
         return data
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -106,30 +110,29 @@ async def get_stock_data(symbol: str):
 
 @router.get("/stocks", summary="Get Multiple Stocks Data")
 async def get_multiple_stocks(
-    symbols: List[str] = Query(..., description="List of stock symbols")
+    symbols: List[str] = Query(..., description="List of stock symbols"),
 ):
     """
     Get financial data for multiple stock symbols.
-    
+
     - **symbols**: List of stock symbols (e.g., ["AAPL", "INFY", "GOOGL"])
-    
+
     Returns data for each symbol, including successful and failed requests.
     """
     try:
         if not symbols:
             raise HTTPException(status_code=400, detail="No symbols provided")
-        
+
         if len(symbols) > 10:  # Limit batch size
             raise HTTPException(
-                status_code=400, 
-                detail="Maximum 10 symbols allowed per request"
+                status_code=400, detail="Maximum 10 symbols allowed per request"
             )
-        
+
         logger.info(f"API request for multiple symbols: {symbols}")
-        
+
         data = financial_agent.fetch_multiple_stocks(symbols)
         return data
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -137,22 +140,26 @@ async def get_multiple_stocks(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/market-info/{symbol}", response_model=MarketInfoResponse, summary="Get Market Information")
+@router.get(
+    "/market-info/{symbol}",
+    response_model=MarketInfoResponse,
+    summary="Get Market Information",
+)
 async def get_market_info(symbol: str):
     """
     Get market classification and routing information for a stock symbol.
-    
+
     - **symbol**: Stock symbol to analyze
-    
-    Returns information about which market the symbol belongs to and 
+
+    Returns information about which market the symbol belongs to and
     which data source will be used.
     """
     try:
         logger.info(f"API request for market info: {symbol}")
-        
+
         data = financial_agent.get_market_info(symbol)
         return data
-        
+
     except Exception as e:
         logger.error(f"Error in get_market_info: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -162,7 +169,7 @@ async def get_market_info(symbol: str):
 async def health_check():
     """
     Check health status of all integrated APIs and services.
-    
+
     Returns the status of:
     - Screener.in API (for Indian stocks)
     - Alpha Vantage API (for global stocks)
@@ -170,19 +177,17 @@ async def health_check():
     """
     try:
         logger.info("API health check requested")
-        
+
         health_data = financial_agent.health_check()
         return health_data
-        
+
     except Exception as e:
         logger.error(f"Error in health_check: {str(e)}")
         # Return degraded status if health check itself fails
         return {
             "overall_status": "unhealthy",
-            "components": {
-                "error": str(e)
-            },
-            "agent_version": "1.0.0"
+            "components": {"error": str(e)},
+            "agent_version": "1.0.0",
         }
 
 
@@ -190,7 +195,7 @@ async def health_check():
 async def get_supported_markets():
     """
     Get information about supported markets and exchanges.
-    
+
     Returns details about:
     - Indian markets (NSE, BSE)
     - Global markets (NASDAQ, NYSE, etc.)
@@ -199,7 +204,7 @@ async def get_supported_markets():
     try:
         data = financial_agent.get_supported_markets()
         return data
-        
+
     except Exception as e:
         logger.error(f"Error in get_supported_markets: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

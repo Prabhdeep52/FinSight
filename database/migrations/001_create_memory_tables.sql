@@ -1,6 +1,6 @@
 -- Migration: Create memory tables for conversation continuity
 -- Description: Two-tier memory system with conversations and messages
--- Author: InvestIQ Team
+-- Author: FinSight Team
 -- Date: 2024
 
 -- =====================================================
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     title TEXT DEFAULT 'New Conversation',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
+
     -- Indexes
     CONSTRAINT conversations_user_session_unique UNIQUE (user_id, session_id)
 );
@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS messages (
     metadata JSONB DEFAULT '{}',
     cumulative_context TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    
+
     -- Foreign key
     CONSTRAINT fk_messages_session
-        FOREIGN KEY (session_id) 
+        FOREIGN KEY (session_id)
         REFERENCES conversations(session_id)
         ON DELETE CASCADE
 );
@@ -62,7 +62,7 @@ CREATE INDEX idx_messages_metadata ON messages USING GIN (metadata);
 CREATE OR REPLACE FUNCTION update_conversation_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
-    UPDATE conversations 
+    UPDATE conversations
     SET updated_at = NOW()
     WHERE session_id = NEW.session_id;
     RETURN NEW;
@@ -93,7 +93,7 @@ BEGIN
         WHERE session_id = NEW.session_id AND role = 'user'
         ORDER BY created_at ASC
         LIMIT 1;
-        
+
         -- If this is the first message, update conversation title
         IF first_msg IS NOT NULL THEN
             UPDATE conversations
@@ -104,7 +104,7 @@ BEGIN
             WHERE session_id = NEW.session_id AND title = 'New Conversation';
         END IF;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -124,7 +124,7 @@ EXECUTE FUNCTION generate_conversation_title();
 -- SELECT * FROM conversations WHERE user_id = 'user_123' ORDER BY updated_at DESC;
 
 -- Get conversation with messages
--- SELECT 
+-- SELECT
 --     c.session_id,
 --     c.title,
 --     c.created_at,

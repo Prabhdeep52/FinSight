@@ -1,5 +1,5 @@
 """
-Main LangGraph agent for InvestIQ financial analysis.
+Main LangGraph agent for FinSight financial analysis.
 Orchestrates financial data retrieval and analysis using LLM and tools.
 """
 
@@ -296,7 +296,7 @@ Extract ALL symbols mentioned."""
             extracted_symbols = state.get("extracted_symbols", [])
 
             system_prompt = (
-                "You are InvestIQ. Fetch data for each symbol ONCE only:\n"
+                "You are FinSight. Fetch data for each symbol ONCE only:\n"
                 f"Symbols: {', '.join(extracted_symbols)}\n\n"
                 "For EACH symbol, call these 5 tools (ONE TIME EACH):\n"
                 "1. get_stock_data(symbol)\n"
@@ -1191,7 +1191,7 @@ You can ask questions like:
 
         # System prompt
         system_prompt = (
-            "You are InvestIQ financial assistant. Your task is to fetch comprehensive data.\n\n"
+            "You are FinSight financial assistant. Your task is to fetch comprehensive data.\n\n"
             f"**Symbols to analyze:** {', '.join(symbols)}\n\n"
             "**Required actions for EACH symbol (call ONCE only):**\n"
             "1. get_stock_data(symbol) - Get overview\n"

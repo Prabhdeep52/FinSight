@@ -1,5 +1,5 @@
 """
-Migration runner for InvestIQ database
+Migration runner for FinSight database
 Executes SQL migration files against Supabase database
 """
 
@@ -18,22 +18,22 @@ from database.supabase_client import get_supabase_client
 def run_migration(migration_file: str):
     """
     Run a specific migration file.
-    
+
     Args:
         migration_file: Path to the SQL migration file
     """
     logger.info(f"Starting migration: {migration_file}")
-    
+
     # Read migration SQL
     migration_path = Path(__file__).parent / "migrations" / migration_file
-    
+
     if not migration_path.exists():
         logger.error(f"Migration file not found: {migration_path}")
         return False
-    
-    with open(migration_path, 'r', encoding='utf-8') as f:
+
+    with open(migration_path, "r", encoding="utf-8") as f:
         sql = f.read()
-    
+
     # Get Supabase client
     try:
         supabase = get_supabase_client()
@@ -41,11 +41,11 @@ def run_migration(migration_file: str):
     except Exception as e:
         logger.error(f"Failed to connect to Supabase: {e}")
         return False
-    
+
     # Execute migration using PostgreSQL REST API
     # Note: Supabase Python client doesn't directly support raw SQL execution
     # You'll need to run this through the Supabase SQL Editor or use psycopg2
-    
+
     logger.warning("=" * 80)
     logger.warning("MIGRATION EXECUTION INSTRUCTIONS")
     logger.warning("=" * 80)
@@ -70,34 +70,34 @@ def run_migration(migration_file: str):
     logger.warning("=" * 80)
     logger.warning(f"Migration file location: {migration_path.absolute()}")
     logger.warning("=" * 80)
-    
+
     # Display the SQL for easy copy-paste
     print("\n\n" + "=" * 80)
     print("MIGRATION SQL (Copy this to Supabase SQL Editor)")
     print("=" * 80)
     print(sql)
     print("=" * 80)
-    
+
     return True
 
 
 def run_all_migrations():
     """Run all pending migrations in order."""
     migrations_dir = Path(__file__).parent / "migrations"
-    
+
     if not migrations_dir.exists():
         logger.error(f"Migrations directory not found: {migrations_dir}")
         return
-    
+
     # Get all .sql files sorted by name
     migration_files = sorted([f.name for f in migrations_dir.glob("*.sql")])
-    
+
     if not migration_files:
         logger.info("No migration files found")
         return
-    
+
     logger.info(f"Found {len(migration_files)} migration(s)")
-    
+
     for migration_file in migration_files:
         success = run_migration(migration_file)
         if not success:
@@ -107,16 +107,16 @@ def run_all_migrations():
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Run database migrations")
     parser.add_argument(
         "--migration",
         type=str,
-        help="Specific migration file to run (e.g., 001_create_memory_tables.sql)"
+        help="Specific migration file to run (e.g., 001_create_memory_tables.sql)",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.migration:
         run_migration(args.migration)
     else:

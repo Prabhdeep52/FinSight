@@ -278,7 +278,7 @@ class OptimizedAutonomousAgent:
 
         Returns: (list of tool calls, reasoning text from LLM)
         """
-        planning_system_prompt = """You are InvestIQ planning data collection.
+        planning_system_prompt = """You are FinSight planning data collection.
 
 **FIRST: Explain your reasoning in 1-2 sentences:**
 - What type of query is this?
@@ -591,7 +591,7 @@ Remember: Explain first, then call all tools NOW!"""
         """
         context = self._create_context(state)
 
-        final_system_prompt = """You are InvestIQ. Generate a comprehensive financial analysis report in Markdown.
+        final_system_prompt = """You are FinSight. Generate a comprehensive financial analysis report in Markdown.
 
     **Structure:**
     ## Executive Summary
@@ -783,7 +783,7 @@ Remember: Explain first, then call all tools NOW!"""
             response = self.llm.invoke(
                 [
                     SystemMessage(
-                        content="You are InvestIQ, a financial analysis assistant."
+                        content="You are FinSight, a financial analysis assistant."
                     ),
                     HumanMessage(content=user_query),
                 ]

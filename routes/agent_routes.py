@@ -170,7 +170,7 @@ async def agent_info():
     logger.info("AgentRoutes: Agent info endpoint called")
 
     return {
-        "name": "InvestIQ LangGraph Financial Agent",
+        "name": "FinSight LangGraph Financial Agent",
         "version": "1.0.0",
         "description": "Natural language interface for financial analysis using LangGraph and LLM",
         "capabilities": [

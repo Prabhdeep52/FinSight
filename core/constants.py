@@ -1,5 +1,5 @@
 """
-Constants for InvestIQ financial agent system.
+Constants for FinSight financial agent system.
 Contains API endpoints, base URLs, and other configuration constants.
 """
 
@@ -7,10 +7,10 @@ Contains API endpoints, base URLs, and other configuration constants.
 ALPHAVANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 ALPHAVANTAGE_FUNCTIONS = {
     "overview": "OVERVIEW",
-    "earnings": "EARNINGS", 
+    "earnings": "EARNINGS",
     "income_statement": "INCOME_STATEMENT",
     "balance_sheet": "BALANCE_SHEET",
-    "cash_flow": "CASH_FLOW"
+    "cash_flow": "CASH_FLOW",
 }
 
 # Screener.in URLs (for Indian stocks)
@@ -36,7 +36,7 @@ FINANCIAL_METRICS = {
     "market_cap": ["Market Cap", "Market Capitalization"],
     "debt_to_equity": ["Debt to Equity", "D/E Ratio"],
     "roe": ["ROE", "Return on Equity"],
-    "dividend_yield": ["Dividend Yield", "DividendYield"]
+    "dividend_yield": ["Dividend Yield", "DividendYield"],
 }
 
 # HTTP status codes
