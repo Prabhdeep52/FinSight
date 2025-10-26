@@ -1,3 +1,4 @@
+/** eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useMemo } from "react";
@@ -21,8 +22,8 @@ import {
 
 interface Stock {
   symbol: string;
-  stockData: Record<string, unknown>;
-  statementData: Record<string, unknown>;
+  stockData: Record<string, any>;
+  statementData: Record<string, any>;
   events?: any[];
 }
 

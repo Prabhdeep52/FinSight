@@ -1,8 +1,21 @@
 "use client";
-
 import React from "react";
-import type { StreamEvent } from "../services/streamingService";
 import { Newspaper } from "lucide-react";
+
+// Define the structure of a single news article
+interface NewsArticle {
+  title: string;
+  url: string;
+  snippet?: string;
+  source?: string;
+  publishedAt?: string;
+}
+
+// Define your StreamEvent type
+export interface StreamEvent {
+  type: string;
+  data?: NewsArticle[]; // properly typed now
+}
 
 interface NewsSidebarProps {
   events: StreamEvent[];
@@ -13,15 +26,14 @@ export const NewsSidebar: React.FC<NewsSidebarProps> = ({
   events,
   heading = "Latest News",
 }) => {
-  // Extract all news-related events from the main event stream
+  // Filter only news-related events
   const newsEvents = events.filter(
-    (event) => event.type === "news_results" && event.data,
+    (event): event is StreamEvent & { data: NewsArticle[] } =>
+      event.type === "news_results" && Array.isArray(event.data),
   );
 
-  // Flatten all articles from multiple news events
-  const articles = newsEvents.flatMap((event) =>
-    Array.isArray((event as any).data) ? (event as any).data : [],
-  );
+  // Flatten all articles into a single array
+  const articles: NewsArticle[] = newsEvents.flatMap((event) => event.data);
 
   return (
     <div className="w-full bg-black/80 backdrop-blur-md border border-white/10 rounded-xl shadow-lg p-4 space-y-3">
@@ -38,7 +50,7 @@ export const NewsSidebar: React.FC<NewsSidebarProps> = ({
         </p>
       ) : (
         <div className="space-y-3 overflow-y-auto max-h-[80vh] no-scrollbar">
-          {articles.map((article: any, idx: number) => (
+          {articles.map((article, idx) => (
             <div
               key={idx}
               className="p-3 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 cursor-pointer group"
@@ -57,7 +69,7 @@ export const NewsSidebar: React.FC<NewsSidebarProps> = ({
               {article.snippet && (
                 <p className="text-white/60 text-xs mt-2 leading-snug">
                   {article.snippet.length > 140
-                    ? article.snippet.slice(0, 140) + "..."
+                    ? `${article.snippet.slice(0, 140)}...`
                     : article.snippet}
                 </p>
               )}

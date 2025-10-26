@@ -30,18 +30,7 @@ import {
   type StreamEventData,
 } from "./services/streamingService";
 
-type AgentResponse = {
-  query: string;
-  response: string;
-  symbols_analyzed: string[];
-  stock_data: Record<string, Record<string, unknown>>;
-  statement_data?: Record<string, Record<string, unknown>>;
-  analysis_results: Record<string, unknown>;
-  status: string;
-  error_message?: string | null;
-};
-
-type ChatMessage = {
+export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;

@@ -79,6 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <ChatHistorySidebar
         ref={chatHistorySidebarRef}
         isOpen={true}
+        onClose={() => {}} // Added to satisfy ChatHistorySidebarProps
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         currentSessionId={currentSessionId}
@@ -107,6 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 messages={messages}
                 isLoading={isLoading}
                 chatEndRef={chatEndRef}
+                onSelectExample={() => {}} // Added to satisfy ChatMessagesProps
               />
             </div>
             <div className="border-t border-gray-700">

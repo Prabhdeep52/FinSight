@@ -1,4 +1,3 @@
-import React from "react";
 import { PlusCircle, MessageSquare } from "lucide-react";
 
 type ChatHistoryItem = {
