@@ -248,6 +248,11 @@ export default function ChatApp() {
     }
   };
 
+  // New function to handle example selection
+  const handleSelectExample = (exampleText: string) => {
+    setQuery(exampleText);
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -385,6 +390,7 @@ export default function ChatApp() {
                 messages={messages}
                 isLoading={isLoading}
                 chatEndRef={chatEndRef}
+                onSelectExample={handleSelectExample}
               />
             </div>
             <div className="border-t border-gray-700">

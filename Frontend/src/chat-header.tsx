@@ -1,36 +1,38 @@
-"use client"
+"use client";
 
-import { Activity, LogOut, History } from "lucide-react"
+import { Activity, LogOut, History } from "lucide-react";
 
 interface ChatHeaderProps {
-  onClear: () => void
-  onNewChat?: () => void
-  onLogout: () => void
-  onToggleChatHistory: () => void
-  hasMessages: boolean
-  isLoading: boolean
-  onToggleSidebar: () => void
-  isSidebarOpen: boolean
-  isStreaming: boolean
+  onClear: () => void;
+  onNewChat?: () => void;
+  onLogout: () => void;
+  onToggleChatHistory: () => void;
+  hasMessages: boolean;
+  isLoading: boolean;
+  onToggleSidebar: () => void;
+  isSidebarOpen: boolean;
+  isStreaming: boolean;
 }
 
-export default function ChatHeader({ 
+export default function ChatHeader({
   onClear,
   onNewChat,
   onLogout,
   onToggleChatHistory,
-  hasMessages, 
-  isLoading, 
+  hasMessages,
+  isLoading,
   onToggleSidebar,
   isSidebarOpen,
-  isStreaming 
+  isStreaming,
 }: ChatHeaderProps) {
   return (
     <header className="px-6 py-4 shadow-sm border-b border-border">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Finance Bro</h1>
-          <p className="text-sm text-muted-foreground">Your AI powered Financial Agent</p>
+          <h1 className="text-2xl font-bold text-foreground">FinSight</h1>
+          <p className="text-sm text-muted-foreground">
+            Your AI powered Financial Agent
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {/* Chat History Button */}
@@ -42,7 +44,7 @@ export default function ChatHeader({
             <History className="w-4 h-4" />
             <span>Chats</span>
           </button>
-          
+
           {/* Logout Button */}
           <button
             onClick={onLogout}
@@ -52,23 +54,23 @@ export default function ChatHeader({
             <LogOut className="w-4 h-4" />
             <span>Logout</span>
           </button>
-          
+
           {/* Agent Progress Button */}
           <button
             onClick={onToggleSidebar}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
               isStreaming
-                ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 animate-pulse'
-                : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-            } ${isSidebarOpen ? 'ring-2 ring-primary' : ''}`}
+                ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 animate-pulse"
+                : "bg-muted hover:bg-muted/80 text-muted-foreground"
+            } ${isSidebarOpen ? "ring-2 ring-primary" : ""}`}
             title="View agent progress"
           >
             <Activity className="w-4 h-4" />
             <span className="text-sm font-medium">
-              {isStreaming ? 'Processing...' : 'Agent Progress'}
+              {isStreaming ? "Processing..." : "Agent Progress"}
             </span>
           </button>
-          
+
           {hasMessages && (
             <>
               {onNewChat && (
@@ -92,5 +94,5 @@ export default function ChatHeader({
         </div>
       </div>
     </header>
-  )
+  );
 }

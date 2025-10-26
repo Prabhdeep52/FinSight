@@ -43,6 +43,26 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
     }
   };
 
+  // Helper function to safely extract text from reasoning
+  const getReasoningText = (reasoning: any): string => {
+    if (typeof reasoning === "string") {
+      try {
+        const parsed = JSON.parse(reasoning);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].text) {
+          return parsed[0].text;
+        }
+      } catch (e) {
+        // Not a JSON string, or not in the expected format, treat as plain text
+      }
+      return reasoning; // Return original string if not parsable JSON or not expected structure
+    }
+    // If it's already an object (though it shouldn't be if coming from JSON.parse), try to get text
+    if (typeof reasoning === "object" && reasoning !== null && reasoning.text) {
+      return reasoning.text;
+    }
+    return String(reasoning); // Fallback to string conversion
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -188,7 +208,7 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
                       </div>
                       {event.reasoning && (
                         <p className="text-xs text-white/50 text-center italic mt-2">
-                          {event.reasoning}
+                          {getReasoningText(event.reasoning)}
                         </p>
                       )}
                     </div>
@@ -221,7 +241,7 @@ export const AgentProgressSidebar: React.FC<AgentProgressSidebarProps> = ({
                         {event.reasoning && (
                           <div className="mt-2 pl-3 border-l-2 border-white/10">
                             <p className="text-white/60 text-xs italic leading-relaxed">
-                              {event.reasoning}
+                              {getReasoningText(event.reasoning)}
                             </p>
                           </div>
                         )}

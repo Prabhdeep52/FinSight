@@ -22,12 +22,14 @@ interface ChatMessagesProps {
   messages: ChatMessage[];
   isLoading: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
+  onSelectExample: (text: string) => void;
 }
 
 export default function ChatMessages({
   messages,
   isLoading,
   chatEndRef,
+  onSelectExample,
 }: ChatMessagesProps) {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,25 +39,35 @@ export default function ChatMessages({
     return (
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <div className="text-5xl font-light mb-4 text-primary">▲</div>
-          <h2 className="text-2xl font-semibold mb-2">
-            Welcome to Finance Bro
+          <h2 className="text-2xl font-semibold mb-2 mt-10">
+            Welcome to FinSight
           </h2>
           <p className="text-muted-foreground mb-8">
             Ask me anything about stocks, companies, or financial markets
           </p>
           <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground mb-5">
               Try asking:
             </p>
             <div className="space-y-2">
-              <button className="w-full px-4 py-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left text-sm transition-colors">
+              <button
+                className="w-full px-4 py-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left text-sm transition-colors"
+                onClick={() => onSelectExample("Analyze Apple stock")}
+              >
                 Analyze Apple stock
               </button>
-              <button className="w-full px-4 py-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left text-sm transition-colors">
+              <button
+                className="w-full px-4 py-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left text-sm transition-colors"
+                onClick={() => onSelectExample("Compare Microsoft and Google")}
+              >
                 Compare Microsoft and Google
               </button>
-              <button className="w-full px-4 py-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left text-sm transition-colors">
+              <button
+                className="w-full px-4 py-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left text-sm transition-colors"
+                onClick={() =>
+                  onSelectExample("What is the valuation of Tesla?")
+                }
+              >
                 What is the valuation of Tesla?
               </button>
             </div>
