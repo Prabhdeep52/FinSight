@@ -13,3 +13,4 @@ python-jose[cryptography]>=3.3.0
 pydantic[email]
 trafilatura
 ddgs
+google-api-python-client
