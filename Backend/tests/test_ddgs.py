@@ -19,7 +19,7 @@
 #     test_ddgs_news()
 
 
-from agents.tools.search_tool import create_search_tool
+from Backend.agents.tools.search_tool import create_search_tool
 
 news_tool = create_search_tool()
 results = news_tool._run("AAPL")  # or "AMZN" etc.

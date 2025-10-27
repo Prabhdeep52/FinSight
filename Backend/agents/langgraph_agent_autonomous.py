@@ -15,19 +15,19 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
-from config.settings import get_settings
-from core.utils import logger
+from Backend.config.settings import get_settings
+from Backend.core.utils import logger
 import concurrent.futures
 
-from agents.tools.stock_tool import create_stock_data_tool
-from agents.tools.statement_tools import (
+from Backend.agents.tools.stock_tool import create_stock_data_tool
+from Backend.agents.tools.statement_tools import (
     create_income_statement_tool,
     create_balance_sheet_tool,
     create_cash_flow_tool,
     create_earnings_tool,
 )
-from agents.tools.search_tool import create_search_tool
-from core.memory_manager import HybridMemoryManager
+from Backend.agents.tools.search_tool import create_search_tool
+from Backend.core.memory_manager import HybridMemoryManager
 
 
 class OptimizedAutonomousAgent:

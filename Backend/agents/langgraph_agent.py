@@ -14,9 +14,9 @@ from langgraph.graph.message import add_messages
 from config.settings import get_settings
 from core.utils import logger
 import concurrent.futures
-from agents.tools.stock_tool import create_stock_data_tool
-from agents.tools.analysis_tool import create_financial_analysis_tool
-from agents.tools.statement_tools import (
+from Backend.agents.tools.stock_tool import create_stock_data_tool
+from Backend.agents.tools.analysis_tool import create_financial_analysis_tool
+from Backend.agents.tools.statement_tools import (
     create_income_statement_tool,
     create_balance_sheet_tool,
     create_cash_flow_tool,

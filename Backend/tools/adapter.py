@@ -6,11 +6,12 @@ Responsibilities:
 - detect whether a symbol is Indian or global
 - call the appropriate client and return standardized dict
 """
+
 from typing import Dict, Any, List
 import re
 
-from tools.screener_api import ScreenerAPI
-from tools.alphavantage_api import AlphaVantageAPI
+from Backend.tools.screener_api import ScreenerAPI
+from Backend.tools.alphavantage_api import AlphaVantageAPI
 
 
 INDIAN_SUFFIXES = [".NS", ".BO"]
@@ -41,7 +42,7 @@ class DataAdapter:
                 return True
 
         # if contains dot with global exchange like .NS handled above, treat as global
-        if '.' in s:
+        if "." in s:
             return False
 
         # simple alpha-only short tickers are likely Indian (e.g., TCS, INFY)
@@ -61,7 +62,7 @@ class DataAdapter:
             # Try to remove common suffixes if provided
             for suf in INDIAN_SUFFIXES:
                 if s.upper().endswith(suf):
-                    s = s[:-len(suf)]
+                    s = s[: -len(suf)]
                     break
             return self._screener.fetch_company_data(s)
 
@@ -76,5 +77,5 @@ class DataAdapter:
             try:
                 results[sym] = self.fetch(sym)
             except Exception as e:
-                results[sym] = {'error': True, 'message': str(e)}
+                results[sym] = {"error": True, "message": str(e)}
         return results

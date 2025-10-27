@@ -11,8 +11,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from core.utils import logger
-from database.supabase_client import get_supabase_client
+from Backend.core.utils import logger
+from Backend.database.supabase_client import get_supabase_client
 
 
 def run_migration(migration_file: str):

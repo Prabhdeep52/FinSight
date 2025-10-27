@@ -3,6 +3,10 @@ Test script for FinSight LangGraph Financial Agent.
 Tests the agent functionality without requiring API keys.
 """
 
+from Backend.core.utils import logger
+from Backend.agents.tools.stock_tool import create_stock_data_tool
+from Backend.agents.tools.analysis_tool import create_financial_analysis_tool
+
 import sys
 import json
 import logging
@@ -11,10 +15,6 @@ from pathlib import Path
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
-
-from core.utils import logger
-from agents.tools.stock_tool import create_stock_data_tool
-from agents.tools.analysis_tool import create_financial_analysis_tool
 
 
 def test_tools():
