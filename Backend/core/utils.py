@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Union
 from decimal import Decimal, InvalidOperation
-from Backend.config.settings import settings
+from config.settings import settings
 
 
 def setup_logger(name: str, level: str = "INFO") -> logging.Logger:

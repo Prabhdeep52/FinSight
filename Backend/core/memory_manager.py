@@ -10,8 +10,8 @@ Two-Tier Architecture:
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from supabase import Client
-from Backend.config.settings import get_settings
-from Backend.core.utils import logger
+from config.settings import get_settings
+from core.utils import logger
 import uuid
 
 

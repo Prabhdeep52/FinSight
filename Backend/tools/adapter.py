@@ -10,8 +10,8 @@ Responsibilities:
 from typing import Dict, Any, List
 import re
 
-from Backend.tools.screener_api import ScreenerAPI
-from Backend.tools.alphavantage_api import AlphaVantageAPI
+from tools.screener_api import ScreenerAPI
+from tools.alphavantage_api import AlphaVantageAPI
 
 
 INDIAN_SUFFIXES = [".NS", ".BO"]

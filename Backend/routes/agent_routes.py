@@ -7,14 +7,12 @@ from fastapi import APIRouter, HTTPException, Body, Depends, Request
 from fastapi.responses import StreamingResponse
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
-from Backend.agents.langgraph_agent import create_financial_agent
-from Backend.agents.langgraph_agent_optimized import create_optimized_financial_agent
-from Backend.agents.langgraph_agent_autonomous import (
-    create_optimized_autonomous_agent,
-)  # NEW
-from Backend.config.settings import get_settings
-from Backend.core.utils import logger
-from Backend.core.auth import JWTBearer, get_current_user
+from agents.langgraph_agent import create_financial_agent
+from agents.langgraph_agent_optimized import create_optimized_financial_agent
+from agents.langgraph_agent_autonomous import create_optimized_autonomous_agent  # NEW
+from config.settings import get_settings
+from core.utils import logger
+from core.auth import JWTBearer, get_current_user
 import json
 import asyncio
 

@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import asyncio
-from Backend.data_services.financial_agent import FinancialAgent
-from Backend.core.utils import logger
+from data_services.financial_agent import FinancialAgent
+from core.utils import logger
 
 
 # Response models for API documentation

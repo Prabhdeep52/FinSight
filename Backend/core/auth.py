@@ -5,8 +5,8 @@ JWT Bearer authentication for FastAPI with Supabase.
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-from Backend.config.settings import get_settings
-from Backend.core.utils import logger
+from config.settings import get_settings
+from core.utils import logger
 
 settings = get_settings()
 

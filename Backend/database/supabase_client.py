@@ -8,8 +8,8 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 from supabase import create_client, Client
-from Backend.core.utils import logger
-from Backend.config.settings import get_settings
+from core.utils import logger
+from config.settings import get_settings
 
 
 # Global Supabase client instance

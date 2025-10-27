@@ -4,9 +4,9 @@ Routes stock data requests to appropriate tools and returns unified financial da
 """
 
 from typing import Dict, Any, Optional
-from Backend.core.utils import logger, is_indian_stock, clean_symbol, validate_symbol
-from Backend.tools.screener_api import ScreenerAPI
-from Backend.tools.alphavantage_api import AlphaVantageAPI
+from core.utils import logger, is_indian_stock, clean_symbol, validate_symbol
+from tools.screener_api import ScreenerAPI
+from tools.alphavantage_api import AlphaVantageAPI
 
 
 class FinancialAgent:

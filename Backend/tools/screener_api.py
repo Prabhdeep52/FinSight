@@ -6,9 +6,9 @@ Scrapes financial data from Screener.in since they don't provide a public API.
 import requests
 from bs4 import BeautifulSoup
 from typing import Dict, Any, Optional
-from Backend.core.utils import logger, safe_float, format_currency, handle_api_error
-from Backend.core.constants import SCREENER_COMPANY_URL, DEFAULT_INDIAN_CURRENCY
-from Backend.config.settings import get_settings
+from core.utils import logger, safe_float, format_currency, handle_api_error
+from core.constants import SCREENER_COMPANY_URL, DEFAULT_INDIAN_CURRENCY
+from config.settings import get_settings
 
 
 class ScreenerAPI:

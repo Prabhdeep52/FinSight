@@ -5,7 +5,7 @@ Authentication routes for user signup, signin, and signout.
 from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel, EmailStr
 from database.supabase_client import get_supabase_client
-from Backend.core.utils import logger
+from core.utils import logger
 
 router = APIRouter()
 

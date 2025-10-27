@@ -3,9 +3,9 @@ from pydantic import BaseModel
 from email.mime.text import MIMEText
 from googleapiclient.errors import HttpError
 import base64
-from Backend.tools.gmail.gmail_sender import get_gmail_service
-from Backend.routes.auth_routes import get_current_user_info
-from Backend.core.utils import logger
+from tools.gmail.gmail_sender import get_gmail_service
+from routes.auth_routes import get_current_user_info
+from core.utils import logger
 
 router = APIRouter()
 

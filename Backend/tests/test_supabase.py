@@ -13,9 +13,9 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from Backend.tools.alphavantage_api import AlphaVantageAPI
-    from Backend.database.supabase_client import SupabaseManager
-    from Backend.core.utils import logger
+    from tools.alphavantage_api import AlphaVantageAPI
+    from database.supabase_client import SupabaseManager
+    from core.utils import logger
 except ImportError as e:
     print(f"Import error: {e}")
     print("Make sure you're running this from the project root directory")

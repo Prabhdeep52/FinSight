@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+
 """
 Main FastAPI application for FinSight financial agent system.
 Entry point for the financial data API service with AI capabilities.

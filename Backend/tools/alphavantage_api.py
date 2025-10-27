@@ -7,19 +7,19 @@ Includes Supabase caching for improved performance and reduced API calls.
 import requests
 import threading
 from typing import Dict, Any, Optional
-from Backend.core.utils import (
+from core.utils import (
     logger,
     safe_float,
     standardize_financial_data,
     handle_api_error,
 )
-from Backend.core.constants import (
+from core.constants import (
     ALPHAVANTAGE_BASE_URL,
     ALPHAVANTAGE_FUNCTIONS,
     DEFAULT_CURRENCY,
 )
-from Backend.config.settings import get_settings
-from Backend.database.supabase_client import SupabaseManager
+from config.settings import get_settings
+from database.supabase_client import SupabaseManager
 
 
 class AlphaVantageAPI:

@@ -1,5 +1,5 @@
 from ddgs import DDGS
-from Backend.tools.fetch_article_text import fetch_article_text
+from tools.fetch_article_text import fetch_article_text
 
 
 def duckduckgo_search(query: str, max_results: int = 5):
