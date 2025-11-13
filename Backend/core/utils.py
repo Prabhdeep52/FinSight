@@ -45,7 +45,7 @@ def is_indian_stock(symbol: str) -> bool:
 
         # Initialize LLM
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             google_api_key=settings.google_api_key,
             temperature=0,
         )
